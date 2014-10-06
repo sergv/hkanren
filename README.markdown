@@ -35,7 +35,7 @@ Some good places to start learning about miniKanren would be
  - [The canonical implementation][canonimpl]
 
 For this implementation in particular, it may be helpful to look at my
-[blog post][post] explaining Oleg et al's `Logic` monad.
+[blog post][post] explaining `Logic` monad.
 
 [reasoned]: http://www.amazon.com/The-Reasoned-Schemer-Daniel-Friedman/DP/0262562146
 [slpresi]: http://www.infoq.com/presentations/miniKanren
