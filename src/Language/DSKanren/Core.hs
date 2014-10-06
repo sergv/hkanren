@@ -36,7 +36,7 @@ canonize sol t = case t of
   Atom a -> Atom a
   Integer i -> Integer i
   Pair l r -> canonize sol l `Pair` canonize sol r
-  Var i -> maybe (Var i) (canonize sol) $ M.lookup i sol
+  Var i -> maybe (Var i) (canonize $ M.delete i sol) $ M.lookup i sol
 
 -- | Extend an environment with a given term. Note that
 -- that we don't even bother to canonize things here, that
@@ -111,4 +111,4 @@ failure = const mzero
 run :: (Term -> Predicate) -> [(Term, [Neq])]
 run mkProg = map answer (observeAll prog)
   where prog = fresh mkProg (State M.empty 0 [])
-        answer State{..} = (canonize (M.delete 0 sol) (sol M.! 0), neq)
+        answer State{..} = (canonize sol (Var 0), neq)
