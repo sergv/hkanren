@@ -11,6 +11,7 @@ module Language.DSKanren.Core ( Term(..)
                               , failure
                               , run ) where
 import           Control.Monad.Logic
+import           Data.String
 import qualified Data.Map            as M
 
 type Var = Integer
@@ -19,6 +20,8 @@ data Term = Var Var
           | Integer Integer
           | Pair Term Term
           deriving Show
+instance IsString Term where
+  fromString = Atom
 
 type Sol = M.Map Var Term
 
