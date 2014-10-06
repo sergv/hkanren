@@ -27,3 +27,17 @@ Which is just a normal Haskell function mapping 3 `Term`s to a
     [Pair (Integer 1) (Pair (Integer 2) (Pair (Integer 3)
     (Pair (Integer 1) (Pair (Integer 2) (Pair (Integer 3) (Integer 0))))))]
 ```
+
+Some good places to start learning about miniKanren would be
+
+ - [The Reasoned Schemer][reasoned]
+ - [William and Daniel's presentation at StrangeLoop][slpresi]
+ - [The canonical implementation][canonimpl]
+
+For this implementation in particular, it may be helpful to look at my
+[blog post][post] explaining Oleg et al's `Logic` monad.
+
+[reasoned]: http://www.amazon.com/The-Reasoned-Schemer-Daniel-Friedman/DP/0262562146
+[slpresi]: http://www.infoq.com/presentations/miniKanren
+[canonimpl]: https://github.com/miniKanren/miniKanren
+[post]: http://jozefg.bitbucket.org/posts/2014-07-10-reading-logict.html
