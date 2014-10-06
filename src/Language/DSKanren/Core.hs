@@ -94,5 +94,5 @@ failure = const mzero
 -- | Run a program and find all solutions for the parametrized term.
 run :: (Term -> Predicate) -> [Term]
 run mkProg = map answer (observeAll prog)
-  where prog = mkProg (Var 0) $ State M.empty 1
-        answer State{..} = canonize sol (Var 0)
+  where prog = fresh mkProg (State M.empty 0)
+        answer State{..} = canonize (M.delete 0 sol) (sol M.! 0)
