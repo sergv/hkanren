@@ -1,7 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
 module Language.DSKanren.Core ( Term(..)
                               , Var
+                              , Neq
                               , (===)
+                              , (=/=)
                               , fresh
                               , conj
                               , disconj
@@ -34,7 +36,7 @@ canonize sol t = case t of
   Atom a -> Atom a
   Integer i -> Integer i
   Pair l r -> canonize sol l `Pair` canonize sol r
-  Var i -> maybe (Var i) (canonize sol) $ M.lookup i sol
+  Var i -> maybe (Var i) (canonize $ M.delete i sol) $ M.lookup i sol
 
 -- | Extend an environment with a given term. Note that
 -- that we don't even bother to canonize things here, that
@@ -53,21 +55,35 @@ unify l r sol= case (l, r) of
   (t, Var i) -> Just (extend i t sol)
   _ -> Nothing
 
-data State = State { sol  :: Sol
-                   , var  :: Integer }
+type Neq = (Term, Term)
+data State = State { sol :: Sol
+                   , var :: Integer
+                   , neq :: [Neq] }
 type Predicate = State -> Logic State
+
+-- | Validate the inqualities still hold
+checkNeqs :: Predicate
+checkNeqs s@State{..} = foldr go (return s) neq
+  where go (l, r) m = case unify l r sol of
+          Nothing -> m
+          Just _  -> mzero
 
 -- | Equating two terms will attempt to unify them and backtrack if
 -- this is impossible.
 (===) :: Term -> Term -> Predicate
 (===) l r s@State {..} =
   case unify (canonize sol l) (canonize sol r) sol of
-   Just sol' -> return s{sol = sol'}
+   Just sol' -> checkNeqs s{sol = sol'} >> return s{sol = sol'}
    Nothing   -> mzero
+
+-- | The opposite of negation. If any future unification would cause
+-- these two terms to become equal we'll backtrack.
+(=/=) :: Term -> Term -> Predicate
+(=/=) l r s@State {..} = return s{neq = (l, r) : neq}
 
 -- | Generate a fresh (not rigid) term to use for our program.
 fresh :: (Term -> Predicate) -> Predicate
-fresh withTerm (State sol i) = withTerm (Var i) (State sol $ i + 1)
+fresh withTerm State{..} = withTerm (Var var) $ State sol (var + 1) neq
 
 -- | Successor, only unify l and r if l is r + 1
 suco :: Term -> Term -> Predicate
@@ -92,7 +108,7 @@ failure :: Predicate
 failure = const mzero
 
 -- | Run a program and find all solutions for the parametrized term.
-run :: (Term -> Predicate) -> [Term]
+run :: (Term -> Predicate) -> [(Term, [Neq])]
 run mkProg = map answer (observeAll prog)
-  where prog = fresh mkProg (State M.empty 0)
-        answer State{..} = canonize (M.delete 0 sol) (sol M.! 0)
+  where prog = fresh mkProg (State M.empty 0 [])
+        answer State{..} = (canonize sol (Var 0), neq)

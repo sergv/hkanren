@@ -3,6 +3,13 @@ A subset implementation of the already small logical language!
 ds-kanren provides a simple way to write logical relations and queries
 in Haskell.
 
+The language supports
+
+ - `conde`
+ - `===`
+ - `suco` (The successor relation)
+ - `=/=`
+
 As a brief demonstration, the classic `appendo` relation.
 
 ``` haskell

@@ -13,7 +13,7 @@ program = foldr conj return
 
 -- | Only grab 1 solution. Useful for when the full logic program
 -- might not terminate. Or takes its sweet time to do so.
-run1 :: (Term -> Predicate) -> Term
+run1 :: (Term -> Predicate) -> (Term, [Neq])
 run1 = head . run
 
 -- | We often want to introduce many fresh variables at once. We've
