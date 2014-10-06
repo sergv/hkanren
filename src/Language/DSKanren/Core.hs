@@ -8,6 +8,7 @@ module Language.DSKanren.Core ( Term(..)
                               , Predicate
                               , suco
                               , zero
+                              , failure
                               , run ) where
 import           Control.Monad.Logic
 import qualified Data.Map            as M
@@ -82,6 +83,10 @@ conj p1 p2 s = p1 s >>- p2
 -- | Disjunction
 disconj :: Predicate -> Predicate -> Predicate
 disconj p1 p2 s = p1 s `interleave` p2 s
+
+-- | The Eeyore of predicates, always fails.
+failure :: Predicate
+failure = const mzero
 
 -- | Run a program and find all solutions for the parametrized term.
 run :: (Term -> Predicate) -> [Term]
