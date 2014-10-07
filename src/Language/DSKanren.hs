@@ -1,5 +1,5 @@
 -- | DSKanren is a small implementation of the miniKanren
--- langauge. The toplevel module exports the core language, in
+-- language. The toplevel module exports the core language, in
 -- 'Language.DSKanren.Core' and some simple combinators from
 -- 'Language.DSKanren.Sugar'.
 module Language.DSKanren ( module Language.DSKanren.Core
