@@ -84,8 +84,8 @@ checkNeqs s@State{..} = foldr go (return s) neq
    Just sol' -> checkNeqs s{sol = sol'}
    Nothing   -> mzero
 
--- | The opposite of negation. If any future unification would cause
--- these two terms to become equal we'll backtrack.
+-- | The opposite of unification. If any future unification would
+-- cause these two terms to become equal we'll backtrack.
 (=/=) :: Term -> Term -> Predicate
 (=/=) l r = Predicate $ \s@State{..} -> return s{neq = (l, r) : neq}
 
