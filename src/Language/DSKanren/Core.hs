@@ -8,8 +8,6 @@ module Language.DSKanren.Core ( Term(..)
                               , conj
                               , disconj
                               , Predicate
-                              , suco
-                              , zero
                               , failure
                               , success
                               , run ) where
@@ -111,16 +109,6 @@ fresh :: (Term -> Predicate) -> Predicate
 fresh withTerm =
   Predicate $ \State{..} ->
                unPred (withTerm $ Var var) $ State sol (suc var) neq
-
--- | Successor, only unify l and r if l is r + 1
-suco :: Term -> Term -> Predicate
-suco l r = Predicate $ \ s@State{..} -> case (canonize sol l, canonize sol r) of
-  (Integer i, _) -> unPred (r === Integer (i + 1)) s
-  (_, Integer i) -> unPred (l === Integer (i - 1)) s
-  _ -> mzero
-
-zero :: Term -> Predicate
-zero = (=== Integer 0)
 
 -- | Conjunction
 conj :: Predicate -> Predicate -> Predicate
