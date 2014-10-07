@@ -2,12 +2,9 @@ name:                ds-kanren
 version:             0.2.0.0
 synopsis:            A subset of the miniKanren language
 description:
-  ds-kanren is a small implementation of the
-  <http://minikanren.org miniKanren> language. The toplevel
-  module exports the core language, in 'Language.DSKanren.Core'
-  and some simple combinators from 'Language.DSKanren.Sugar'.
+  ds-kanren is an implementation of the <http://minikanren.org miniKanren> language.
   .
-  The core API of miniKanren is
+  == What's in ds-kanren?
   .
   ['disconj']
     Try the left and the right and gather solutions that satisfy
@@ -30,6 +27,8 @@ description:
   ['suco']
     A binary relationship where @n@ is related to @n + 1@.
   .
+  == The Classic Example
+  .
   We can define the classic @appendo@ relationship by encoding
   lists in the Lisp "bunch-o-pairs" method.
   .
@@ -47,9 +46,17 @@ description:
   >>> runN 1 $ appendo (term [1, 2]) (term [3])
   [(Pair (Integer 1) (Pair (Integer 2) (Pair (Integer 3) (Integer 0))), [])]
   >>> runN 1 $ \t -> appendo t t (term [1, 1])
-  (Pair (Integer 1) (Integer 0), [])]
+  [(Pair (Integer 1) (Integer 0), [])]
   >>> runN 1 $ runN 1 $ \t -> appendo t (term 0) t
   [(Integer 0,[])]
+  .
+  == Related Links
+  .
+  Some good places to start learning about miniKanren would be
+  .
+     * <http://www.amazon.com/The-Reasoned-Schemer-Daniel-Friedman/DP/0262562146 The Reasoned Schemer>
+     * <http://www.infoq.com/presentations/miniKanren A presentation at StrangeLoop>
+     * <https://github.com/miniKanren/miniKanren The canonical implementation>
 license:             MIT
 license-file:        LICENSE
 author:              Danny Gratzer
