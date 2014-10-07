@@ -17,7 +17,14 @@ import           Control.Monad.Logic
 import           Data.String
 import qualified Data.Map            as M
 
-type Var = Integer
+newtype Var = V {unVar :: Integer} deriving (Eq, Ord)
+
+instance Show Var where
+  show (V i) = '_' : show i
+
+suc :: Var -> Var
+suc (V i) = V (i + 1)
+
 data Term = Var Var
           | Atom String
           | Integer Integer
@@ -58,7 +65,7 @@ unify l r sol= case (l, r) of
 
 type Neq = (Term, Term)
 data State = State { sol :: Sol
-                   , var :: Integer
+                   , var :: Var
                    , neq :: [Neq] }
 newtype Predicate = Predicate {unPred :: State -> Logic State}
 
@@ -86,7 +93,7 @@ checkNeqs State{..} = foldr go (return ()) neq
 fresh :: (Term -> Predicate) -> Predicate
 fresh withTerm =
   Predicate $ \State{..} ->
-               unPred (withTerm $ Var var) $ State sol (var + 1) neq
+               unPred (withTerm $ Var var) $ State sol (suc var) neq
 
 -- | Successor, only unify l and r if l is r + 1
 suco :: Term -> Term -> Predicate
@@ -117,5 +124,5 @@ success = Predicate return
 -- | Run a program and find all solutions for the parametrized term.
 run :: (Term -> Predicate) -> [(Term, [Neq])]
 run mkProg = map answer (observeAll prog)
-  where prog = unPred (fresh mkProg) (State M.empty 0 [])
-        answer State{..} = (canonize sol (Var 0), neq)
+  where prog = unPred (fresh mkProg) (State M.empty (V 0) [])
+        answer State{..} = (canonize sol . Var $ V 0, neq)
