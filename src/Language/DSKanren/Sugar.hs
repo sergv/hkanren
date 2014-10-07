@@ -2,14 +2,15 @@
 module Language.DSKanren.Sugar where
 import Language.DSKanren.Core
 
--- | Disjunction of many clauses.
+-- | Disjunction of many clauses. This can be thought as a logical
+-- switch.
 conde :: [Predicate] -> Predicate
 conde = foldr disconj failure
 
 -- | Conjuction of many clauses. Think of this as a sort of logical
 -- semicolon.
 program :: [Predicate] -> Predicate
-program = foldr conj return
+program = foldr conj success
 
 -- | Only grab 1 solution. Useful for when the full logic program
 -- might not terminate. Or takes its sweet time to do so.

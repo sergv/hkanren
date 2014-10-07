@@ -11,6 +11,7 @@ module Language.DSKanren.Core ( Term(..)
                               , suco
                               , zero
                               , failure
+                              , success
                               , run ) where
 import           Control.Monad.Logic
 import           Data.String
@@ -108,6 +109,10 @@ disconj p1 p2 = Predicate $ \s -> unPred p1 s `interleave` unPred p2 s
 -- | The Eeyore of predicates, always fails.
 failure :: Predicate
 failure = Predicate $ const mzero
+
+-- | The tigger of predicates! always passes.
+success :: Predicate
+success = Predicate return
 
 -- | Run a program and find all solutions for the parametrized term.
 run :: (Term -> Predicate) -> [(Term, [Neq])]
