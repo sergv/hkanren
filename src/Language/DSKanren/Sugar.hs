@@ -31,13 +31,3 @@ instance MkFresh Predicate where
 
 list :: [Term] -> Term
 list = foldr Pair (Atom "nil")
-
-class IsTerm a where
-  -- | Reify a normal haskell value to a logical value.
-  term :: a -> Term
-instance IsTerm Int where
-  term = Integer . fromIntegral
-instance IsTerm Integer where
-  term = Integer
-instance IsTerm a => IsTerm [a] where
-  term = foldr Pair (Integer 0) . map term
