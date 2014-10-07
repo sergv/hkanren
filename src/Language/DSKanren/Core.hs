@@ -82,9 +82,10 @@ newtype Predicate = Predicate {unPred :: State -> Logic State}
 -- | Validate the inqualities still hold
 checkNeqs :: State -> Logic State
 checkNeqs s@State{..} = foldr go (return s) neq
-  where go (l, r) m = case unify l r sol of
-          Nothing -> m
-          Just _  -> mzero
+  where go (l, r) m =
+          case unify (canonize sol l) (canonize sol r) sol of
+           Nothing -> m
+           Just _  -> mzero
 
 -- | Equating two terms will attempt to unify them and backtrack if
 -- this is impossible.
