@@ -24,8 +24,6 @@ description:
   ['=/=']
     The opposite of '===', ensure that the left and right
     never unify.
-  ['suco']
-    A binary relationship where @n@ is related to @n + 1@.
   .
   == The Classic Example
   .
