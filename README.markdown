@@ -26,9 +26,9 @@ Which is just a normal Haskell function mapping 3 `Term`s to a
 `Predicate`. From here we can run a few different ways
 
 ``` haskell
-λ> fst . run1 $ \t -> appendo t (term [1, 2, 3]) (term [1, 2, 3])
+λ> fst . runN 1 $ \t -> appendo t (term [1, 2, 3]) (term [1, 2, 3])
 Integer 0
-λ> fst . run1 $ \t -> appendo (term [1, 2, 3]) t (term [1, 2, 3])
+λ> fst . runN 1 $ \t -> appendo (term [1, 2, 3]) t (term [1, 2, 3])
 Integer 0
 λ> map fst . run $ appendo (term [1, 2, 3]) (term [1, 2, 3])
 [Pair (Integer 1) (Pair (Integer 2) (Pair (Integer 3)
