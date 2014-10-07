@@ -70,8 +70,8 @@ data State = State { sol :: Sol
 newtype Predicate = Predicate {unPred :: State -> Logic State}
 
 -- | Validate the inqualities still hold
-checkNeqs :: State -> Logic ()
-checkNeqs State{..} = foldr go (return ()) neq
+checkNeqs :: State -> Logic State
+checkNeqs s@State{..} = foldr go (return s) neq
   where go (l, r) m = case unify l r sol of
           Nothing -> m
           Just _  -> mzero
@@ -81,7 +81,7 @@ checkNeqs State{..} = foldr go (return ()) neq
 (===) :: Term -> Term -> Predicate
 (===) l r = Predicate $ \s@State {..} ->
   case unify (canonize sol l) (canonize sol r) sol of
-   Just sol' -> checkNeqs s{sol = sol'} >> return s{sol = sol'}
+   Just sol' -> checkNeqs s{sol = sol'}
    Nothing   -> mzero
 
 -- | The opposite of negation. If any future unification would cause
@@ -123,6 +123,6 @@ success = Predicate return
 
 -- | Run a program and find all solutions for the parametrized term.
 run :: (Term -> Predicate) -> [(Term, [Neq])]
-run mkProg = map answer (observeAll prog)
+run mkProg = map answer . observeAll $ prog >>= checkNeqs
   where prog = unPred (fresh mkProg) (State M.empty (V 0) [])
         answer State{..} = (canonize sol . Var $ V 0, neq)
