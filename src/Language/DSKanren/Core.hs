@@ -59,11 +59,11 @@ type Neq = (Term, Term)
 data State = State { sol :: Sol
                    , var :: Integer
                    , neq :: [Neq] }
-type Predicate = State -> Logic State
+newtype Predicate = Predicate {unPred :: State -> Logic State}
 
 -- | Validate the inqualities still hold
-checkNeqs :: Predicate
-checkNeqs s@State{..} = foldr go (return s) neq
+checkNeqs :: State -> Logic ()
+checkNeqs State{..} = foldr go (return ()) neq
   where go (l, r) m = case unify l r sol of
           Nothing -> m
           Just _  -> mzero
@@ -71,7 +71,7 @@ checkNeqs s@State{..} = foldr go (return s) neq
 -- | Equating two terms will attempt to unify them and backtrack if
 -- this is impossible.
 (===) :: Term -> Term -> Predicate
-(===) l r s@State {..} =
+(===) l r = Predicate $ \s@State {..} ->
   case unify (canonize sol l) (canonize sol r) sol of
    Just sol' -> checkNeqs s{sol = sol'} >> return s{sol = sol'}
    Nothing   -> mzero
@@ -79,17 +79,19 @@ checkNeqs s@State{..} = foldr go (return s) neq
 -- | The opposite of negation. If any future unification would cause
 -- these two terms to become equal we'll backtrack.
 (=/=) :: Term -> Term -> Predicate
-(=/=) l r s@State {..} = return s{neq = (l, r) : neq}
+(=/=) l r = Predicate $ \s@State{..} -> return s{neq = (l, r) : neq}
 
 -- | Generate a fresh (not rigid) term to use for our program.
 fresh :: (Term -> Predicate) -> Predicate
-fresh withTerm State{..} = withTerm (Var var) $ State sol (var + 1) neq
+fresh withTerm =
+  Predicate $ \State{..} ->
+               unPred (withTerm $ Var var) $ State sol (var + 1) neq
 
 -- | Successor, only unify l and r if l is r + 1
 suco :: Term -> Term -> Predicate
-suco l r s@State{..} = case (canonize sol l, canonize sol r) of
-  (Integer i, _) -> (===) r (Integer $ i + 1) s
-  (_, Integer i) -> (===) l (Integer $ i - 1) s
+suco l r = Predicate $ \ s@State{..} -> case (canonize sol l, canonize sol r) of
+  (Integer i, _) -> unPred (r === Integer (i + 1)) s
+  (_, Integer i) -> unPred (l === Integer (i - 1)) s
   _ -> mzero
 
 zero :: Term -> Predicate
@@ -97,18 +99,18 @@ zero = (=== Integer 0)
 
 -- | Conjunction
 conj :: Predicate -> Predicate -> Predicate
-conj p1 p2 s = p1 s >>- p2
+conj p1 p2 = Predicate $ \s -> unPred p1 s >>- unPred p2
 
 -- | Disjunction
 disconj :: Predicate -> Predicate -> Predicate
-disconj p1 p2 s = p1 s `interleave` p2 s
+disconj p1 p2 = Predicate $ \s -> unPred p1 s `interleave` unPred p2 s
 
 -- | The Eeyore of predicates, always fails.
 failure :: Predicate
-failure = const mzero
+failure = Predicate $ const mzero
 
 -- | Run a program and find all solutions for the parametrized term.
 run :: (Term -> Predicate) -> [(Term, [Neq])]
 run mkProg = map answer (observeAll prog)
-  where prog = fresh mkProg (State M.empty 0 [])
+  where prog = unPred (fresh mkProg) (State M.empty 0 [])
         answer State{..} = (canonize sol (Var 0), neq)
