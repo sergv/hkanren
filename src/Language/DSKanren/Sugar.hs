@@ -29,6 +29,9 @@ instance MkFresh a => MkFresh (Term -> a) where
 instance MkFresh Predicate where
   manyFresh = id
 
+list :: [Term] -> Term
+list = foldr Pair (Atom "nil")
+
 class IsTerm a where
   -- | Reify a normal haskell value to a logical value.
   term :: a -> Term
