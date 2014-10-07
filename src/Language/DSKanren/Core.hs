@@ -17,6 +17,8 @@ import           Control.Monad.Logic
 import           Data.String
 import qualified Data.Map            as M
 
+-- | The abstract type of variables. As a consumer you should never
+-- feel the urge to manipulate these directly.
 newtype Var = V {unVar :: Integer} deriving (Eq, Ord)
 
 instance Show Var where
@@ -25,11 +27,19 @@ instance Show Var where
 suc :: Var -> Var
 suc (V i) = V (i + 1)
 
-data Term = Var Var
-          | Atom String
-          | Integer Integer
-          | Pair Term Term
-          deriving Show
+-- | The terms of our logical language.
+data Term = Var Var         -- ^ Logical variables that can unify with other terms
+          | Atom String     -- ^ The equivalent of Scheme's symbols or keywords
+          | Integer Integer -- ^ Boring old numbers
+          | Pair Term Term  -- ^ Pairs of terms
+
+instance Show Term where
+  show t = case t of
+    Var v -> show v
+    Atom a -> a
+    Integer i -> show i
+    Pair l r -> "(" ++ show l ++ ", " ++ show r ++ ")"
+
 instance IsString Term where
   fromString = Atom
 
