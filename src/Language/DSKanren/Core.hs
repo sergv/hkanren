@@ -19,7 +19,7 @@ import qualified Data.Map            as M
 
 -- | The abstract type of variables. As a consumer you should never
 -- feel the urge to manipulate these directly.
-newtype Var = V {unVar :: Integer} deriving (Eq, Ord)
+newtype Var = V Integer deriving (Eq, Ord)
 
 instance Show Var where
   show (V i) = '_' : show i
