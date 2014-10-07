@@ -28,14 +28,12 @@ suc (V i) = V (i + 1)
 -- | The terms of our logical language.
 data Term = Var Var         -- ^ Logical variables that can unify with other terms
           | Atom String     -- ^ The equivalent of Scheme's symbols or keywords
-          | Integer Integer -- ^ Boring old numbers
           | Pair Term Term  -- ^ Pairs of terms
 
 instance Show Term where
   show t = case t of
     Var v -> show v
     Atom a -> a
-    Integer i -> show i
     Pair l r -> "(" ++ show l ++ ", " ++ show r ++ ")"
 
 instance IsString Term where
@@ -50,7 +48,6 @@ type Sol = M.Map Var Term
 canonize :: Sol -> Term -> Term
 canonize sol t = case t of
   Atom a -> Atom a
-  Integer i -> Integer i
   Pair l r -> canonize sol l `Pair` canonize sol r
   Var i -> maybe (Var i) (canonize $ M.delete i sol) $ M.lookup i sol
 
@@ -65,7 +62,6 @@ extend = M.insert
 unify :: Term -> Term -> Sol -> Maybe Sol
 unify l r sol= case (l, r) of
   (Atom a, Atom a') | a == a' -> Just sol
-  (Integer i, Integer j) | i == j -> Just sol
   (Pair h t, Pair h' t') -> unify h h' sol >>= unify t t'
   (Var i, t) -> Just (extend i t sol)
   (t, Var i) -> Just (extend i t sol)
