@@ -26,9 +26,9 @@ suc :: Var -> Var
 suc (V i) = V (i + 1)
 
 -- | The terms of our logical language.
-data Term = Var Var         -- ^ Logical variables that can unify with other terms
-          | Atom String     -- ^ The equivalent of Scheme's symbols or keywords
-          | Pair Term Term  -- ^ Pairs of terms
+data Term = Var Var        -- ^ Logical variables that can unify with other terms
+          | Atom String    -- ^ The equivalent of Scheme's symbols or keywords
+          | Pair Term Term -- ^ Pairs of terms
 
 instance Show Term where
   show t = case t of
@@ -106,19 +106,26 @@ fresh withTerm =
   Predicate $ \State{..} ->
                unPred (withTerm $ Var var) $ State sol (suc var) neq
 
--- | Conjunction
+-- | Conjunction. This will return solutions that satsify both the
+-- first and second predicate.
 conj :: Predicate -> Predicate -> Predicate
 conj p1 p2 = Predicate $ \s -> unPred p1 s >>- unPred p2
 
--- | Disjunction
+-- | Disjunction. This will return solutions that satisfy either the
+-- first predicate or the second.
 disconj :: Predicate -> Predicate -> Predicate
 disconj p1 p2 = Predicate $ \s -> unPred p1 s `interleave` unPred p2 s
 
--- | The Eeyore of predicates, always fails.
+-- | The Eeyore of predicates, always fails. This is mostly useful as
+-- a way of pruning out various conditions, as in
+-- @'conj' (a '===' b) 'failure'@. This is also an identity for
+-- 'disconj'.
 failure :: Predicate
 failure = Predicate $ const mzero
 
--- | The tigger of predicates! always passes.
+-- | The Tigger of predicates! always passes. This isn't very useful
+-- on it's own, but is helpful when building up new combinators. It
+-- functions as an identity for 'conj'.
 success :: Predicate
 success = Predicate return
 
