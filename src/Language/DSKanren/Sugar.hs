@@ -29,5 +29,7 @@ instance MkFresh a => MkFresh (Term -> a) where
 instance MkFresh Predicate where
   manyFresh = id
 
+-- | Build a lispish list out of terms. The atom @"nil"@ will serve as
+-- the empty list and 'Pair' will be ':'.
 list :: [Term] -> Term
 list = foldr Pair (Atom "nil")

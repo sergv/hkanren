@@ -124,8 +124,8 @@ failure :: Predicate
 failure = Predicate $ const mzero
 
 -- | The Tigger of predicates! always passes. This isn't very useful
--- on it's own, but is helpful when building up new combinators. It
--- functions as an identity for 'conj'.
+-- on it's own, but is helpful when building up new combinators. This
+-- is also an identity for 'conj'.
 success :: Predicate
 success = Predicate return
 
