@@ -7,7 +7,6 @@ The language supports
 
  - `conde`
  - `===`
- - `suco` (The successor relation)
  - `=/=`
 
 As a brief demonstration, the classic `appendo` relation.
@@ -15,7 +14,7 @@ As a brief demonstration, the classic `appendo` relation.
 ``` haskell
 appendo :: Term -> Term -> Term -> Predicate
 appendo l r o =
-  conde [ program [l === Integer 0,  o === r]
+  conde [ program [l === "nil", o === r]
         , manyFresh $ \h t o' ->
             program [ Pair h t === l
                     , appendo t r o'
@@ -25,15 +24,14 @@ appendo l r o =
 Which is just a normal Haskell function mapping 3 `Term`s to a
 `Predicate`. From here we can run a few different ways
 
-``` haskell
-λ> fst . runN 1 $ \t -> appendo t (term [1, 2, 3]) (term [1, 2, 3])
-Integer 0
-λ> fst . runN 1 $ \t -> appendo (term [1, 2, 3]) t (term [1, 2, 3])
-Integer 0
-λ> map fst . run $ appendo (term [1, 2, 3]) (term [1, 2, 3])
-[Pair (Integer 1) (Pair (Integer 2) (Pair (Integer 3)
-(Pair (Integer 1) (Pair (Integer 2) (Pair (Integer 3) (Integer 0))))))]
-```
+    >>> let l = list ["foo", "bar"]
+    .
+    >>> map fst . runN 1 $ \t -> appendo t l l
+    [nil]
+    >>> map fst . runN 1 $ \t -> appendo l t l
+    [nil]
+    >>> map fst . runN 1 $ \t -> appendo l l t
+    [(foo, (bar, (foo, (bar, nil))))]
 
 `run` returns a list of solutions and inequality constraints. The
 inequality constraints are things generated from `=/=`'s. Some of

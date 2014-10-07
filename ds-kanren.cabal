@@ -34,7 +34,7 @@ description:
   .
   > appendo :: Term -> Term -> Term -> Predicate
   > appendo l r o =
-  >   conde [ program [l === Integer 0,  o === r]
+  >   conde [ program [l === "nil",  o === r]
   >         , manyFresh $ \h t o ->
   >             program [ Pair h t === l
   >                     , appendo t r o
@@ -43,12 +43,14 @@ description:
   Once we have a relationship, we can run it backwards and forwards
   as we can with most logic programs.
   .
-  >>> runN 1 $ appendo (term [1, 2]) (term [3])
-  [(Pair (Integer 1) (Pair (Integer 2) (Pair (Integer 3) (Integer 0))), [])]
-  >>> runN 1 $ \t -> appendo t t (term [1, 1])
-  [(Pair (Integer 1) (Integer 0), [])]
-  >>> runN 1 $ runN 1 $ \t -> appendo t (term 0) t
-  [(Integer 0,[])]
+  >>> let l = list ["foo", "bar"]
+  .
+  >>> map fst . runN 1 $ \t -> appendo t l l
+  [nil]
+  >>> map fst . runN 1 $ \t -> appendo l t l
+  [nil]
+  >>> map fst . runN 1 $ \t -> appendo l l t
+  [(foo, (bar, (foo, (bar, nil))))]
   .
   == Related Links
   .
