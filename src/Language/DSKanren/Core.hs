@@ -79,13 +79,19 @@ data State = State { sol :: Sol
                    , neq :: [Neq] }
 newtype Predicate = Predicate {unPred :: State -> Logic State}
 
--- | Validate the inqualities still hold
+-- | Validate the inqualities still hold.
+-- To do this we try to unify each pair under the current
+-- solution, if this fails we're okay. If they *don't* then
+-- make sure that the solution under which they unify is an
+-- extension of the solution set, ie we must add more facts
+-- to get a contradiction.
 checkNeqs :: State -> Logic State
 checkNeqs s@State{..} = foldr go (return s) neq
   where go (l, r) m =
           case unify (canonize sol l) (canonize sol r) sol of
            Nothing -> m
-           Just _  -> mzero
+           Just badSol -> if domain badSol == domain sol then mzero else m
+        domain = M.keys
 
 -- | Equating two terms will attempt to unify them and backtrack if
 -- this is impossible.
@@ -134,6 +140,6 @@ success = Predicate return
 
 -- | Run a program and find all solutions for the parametrized term.
 run :: (Term -> Predicate) -> [(Term, [Neq])]
-run mkProg = map answer . observeAll $ prog >>= checkNeqs
+run mkProg = map answer . observeAll $ prog
   where prog = unPred (fresh mkProg) (State M.empty (V 0) [])
         answer State{..} = (canonize sol . Var $ V 0, neq)
