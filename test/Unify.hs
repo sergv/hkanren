@@ -58,9 +58,24 @@ conjcomm = testProperty "Commutative"
 conjTests :: TestTree
 conjTests = testGroup "Conj" [conjid, conjcomm]
 
+------------------------- Disconj ------------------------------------
+disconjid :: TestTree
+disconjid = testProperty "Commutative"
+            . forPred
+            $ \p -> hasSolution p ==> hasSolution (disconj failure p)
+
+disconjcomm :: TestTree
+disconjcomm = testProperty "Commutative"
+              . forPred2
+              $ \p o ->
+                 hasSolution (disconj p o) ==> hasSolution (disconj o p)
+
+disconjTests :: TestTree
+disconjTests = testGroup "Disconj" [disconjid, disconjcomm]
 
 main :: IO ()
 main = defaultMain . testGroup "List Tests" $
        [ eqTests
        , freshTests
-       , conjTests]
+       , conjTests
+       , disconjTests ]

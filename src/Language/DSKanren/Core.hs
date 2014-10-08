@@ -52,6 +52,15 @@ canonize sol t = case t of
   Pair l r -> canonize sol l `Pair` canonize sol r
   Var i -> maybe (Var i) (canonize $ M.delete i sol) $ M.lookup i sol
 
+-- | Ensures that a variable doesn't occur in some other term. This
+-- prevents us from getting some crazy infinite term. None of that
+-- nonsense.
+notIn :: Var -> Term -> Bool
+notIn v t = case t of
+  Var v' -> v /= v'
+  Atom _ -> True
+  Pair l r -> notIn v l && notIn v r
+
 -- | Extend an environment with a given term. Note that
 -- that we don't even bother to canonize things here, that
 -- can wait until we extact a solution.
@@ -64,8 +73,9 @@ unify :: Term -> Term -> Sol -> Maybe Sol
 unify l r sol= case (l, r) of
   (Atom a, Atom a') | a == a' -> Just sol
   (Pair h t, Pair h' t') -> unify h h' sol >>= unify t t'
-  (Var i, t) -> Just (extend i t sol)
-  (t, Var i) -> Just (extend i t sol)
+  (Var i, Var j) | i == j -> Just sol
+  (Var i, t) | i `notIn` t -> Just (extend i t sol)
+  (t, Var i) | i `notIn` t -> Just (extend i t sol)
   _ -> Nothing
 
 type Neq = (Term, Term)
