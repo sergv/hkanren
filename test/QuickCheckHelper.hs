@@ -26,11 +26,6 @@ hasSolution = runFor1
   where runFor1 p = case run (const p) of
           _ : _ -> True
           []    -> False
-two :: Applicative f => f a -> f (a, a)
-two f = (,) <$> f <*> f
-
-three :: Applicative f => f a -> f (a, a, a)
-three f = (,,) <$> f <*> f <*> f
 
 mkTerm :: [Term] -> Gen Term
 mkTerm vars = oneof $
@@ -49,9 +44,24 @@ mkPred vars = -- TODO, Fit fresh in here somehow
   , Neq   <$> mkTerm vars <*> mkTerm vars
   , elements [Tigger, Eeyore]]
 
-forPred :: (Predicate -> Property) -> Property
+two :: Applicative f => f a -> f (a, a)
+two f = (,) <$> f <*> f
+
+three :: Applicative f => f a -> f (a, a, a)
+three f = (,,) <$> f <*> f <*> f
+
+forTerm :: Testable a => (Term -> a) -> Property
+forTerm = forAll (mkTerm [currentGoal])
+
+forTerm2 :: Testable a => (Term -> Term -> a) -> Property
+forTerm2 p = forAll (two $ mkTerm [currentGoal]) $ \(l, r) -> p l r
+
+forTerm3 :: Testable a => (Term -> Term -> Term -> a) -> Property
+forTerm3 p = forAll (three $ mkTerm [currentGoal]) $ \(l, m, r) -> p l m r
+
+forPred :: Testable a => (Predicate -> a) -> Property
 forPred = forAll (mkPred [currentGoal]) . (. toPredicate)
 
-forPred2 :: (Predicate -> Predicate -> Property) -> Property
+forPred2 :: Testable a => (Predicate -> Predicate -> a) -> Property
 forPred2 p = forAll (two $ mkPred [currentGoal]) $
              \(l, r) -> p (toPredicate l) (toPredicate r)

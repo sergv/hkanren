@@ -8,20 +8,20 @@ import QuickCheckHelper
 
 eqrefl :: TestTree
 eqrefl = testProperty "Reflexivity"
-            . forAll (mkTerm [currentGoal])
+            . forTerm
             $ \t -> hasSolution (t === t)
 
 eqcomm :: TestTree
 eqcomm = testProperty "Commutative"
-         . forAll (two $ mkTerm [currentGoal])
-         $ \ (l, r) ->
+         . forTerm2
+         $ \ l r ->
             hasSolution (l === r)
             ==> hasSolution (r === l)
 
 eqtrans :: TestTree
 eqtrans = testProperty "Transitive"
-          . forAll (three $ mkTerm [currentGoal])
-          $ \(l, m, r) ->
+          . forTerm3
+          $ \l m r ->
              hasSolution (conj (l === m) (m === r))
              ==> hasSolution (r === l)
 
