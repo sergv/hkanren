@@ -37,6 +37,11 @@ freshClosed = testProperty "Closed Under Fresh"
 freshTests :: TestTree
 freshTests = testGroup "Fresh" [freshClosed]
 
+conjid :: TestTree
+conjid = testProperty "Commutative"
+              . forAll (Blind <$> mkPred [currentGoal])
+              $ \(Blind p) ->
+                 hasSolution p ==> hasSolution (conj success p)
 conjcomm :: TestTree
 conjcomm = testProperty "Commutative"
               . forAll (two $ Blind <$> mkPred [currentGoal])
@@ -45,7 +50,7 @@ conjcomm = testProperty "Commutative"
                  ==> hasSolution (conj p o)
 
 conjTests :: TestTree
-conjTests = testGroup "Conj" [conjcomm]
+conjTests = testGroup "Conj" [conjid, conjcomm]
 
 main :: IO ()
 main = defaultMain . testGroup "List Tests" $
