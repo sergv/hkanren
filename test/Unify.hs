@@ -5,6 +5,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck hiding ((===))
 import QuickCheckHelper
 
+--------------------------- Equal -------------------------------------
 eqrefl :: TestTree
 eqrefl = testProperty "Reflexivity"
             . forTerm
@@ -27,6 +28,7 @@ eqtrans = testProperty "Transitive"
 eqTests :: TestTree
 eqTests = testGroup "Equality" [eqrefl, eqcomm, eqtrans]
 
+--------------------------- Fresh ------------------------------------
 freshClosed :: TestTree
 freshClosed = testProperty "Closed Under Fresh"
               . forPred
@@ -41,6 +43,7 @@ freshUnify = testProperty "Unification Under Fresh"
 freshTests :: TestTree
 freshTests = testGroup "Fresh" [freshClosed, freshUnify]
 
+--------------------------- Conj -------------------------------------
 conjid :: TestTree
 conjid = testProperty "Commutative"
               . forPred
@@ -54,6 +57,7 @@ conjcomm = testProperty "Commutative"
 
 conjTests :: TestTree
 conjTests = testGroup "Conj" [conjid, conjcomm]
+
 
 main :: IO ()
 main = defaultMain . testGroup "List Tests" $
