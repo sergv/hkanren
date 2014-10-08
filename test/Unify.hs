@@ -30,24 +30,23 @@ eqTests = testGroup "Equality" [eqrefl, eqcomm, eqtrans]
 
 freshClosed :: TestTree
 freshClosed = testProperty "Closed Under Fresh"
-              . forAll (Blind <$> mkPred [currentGoal])
-              $ \(Blind p) ->
-                 hasSolution p ==> hasSolution (fresh $ const p)
+              . forPred
+              $ \p -> hasSolution p ==> hasSolution (fresh $ const p)
 
 freshTests :: TestTree
 freshTests = testGroup "Fresh" [freshClosed]
 
 conjid :: TestTree
 conjid = testProperty "Commutative"
-              . forAll (Blind <$> mkPred [currentGoal])
-              $ \(Blind p) ->
-                 hasSolution p ==> hasSolution (conj success p)
+              . forPred
+              $ \p -> hasSolution p ==> hasSolution (conj success p)
+
 conjcomm :: TestTree
 conjcomm = testProperty "Commutative"
-              . forAll (two $ Blind <$> mkPred [currentGoal])
-              $ \(Blind p, Blind o) ->
+              . forPred2
+              $ \p o ->
                  hasSolution (conj p o)
-                 ==> hasSolution (conj p o)
+                 ==> hasSolution (conj o p)
 
 conjTests :: TestTree
 conjTests = testGroup "Conj" [conjid, conjcomm]
