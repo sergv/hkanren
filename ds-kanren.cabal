@@ -67,8 +67,8 @@ cabal-version:       >=1.10
 source-repository head
   type:     hg
   location: http://bitbucket.org/jozefg/ds-kanren
-library
 
+library
   exposed-modules:     Language.DSKanren
                      , Language.DSKanren.Core
                      , Language.DSKanren.Sugar
@@ -76,4 +76,26 @@ library
                      , containers >=0.4
                      , logict
   hs-source-dirs:      src
+  default-language:    Haskell2010
+Test-Suite test-unify:
+  hs-source-dirs: test
+  type:               exitcode-stdio-1.0
+  main-is:            Unify.hs
+  hs-source-dirs:     test
+  build-depends:      ds-kanren
+                    , test-framework
+                    , test-framework-quickcheck
+                    , QuickCheck
+                    , base >=4 && <5
+  default-language:    Haskell2010
+Test-Suite test-list-ops:
+  hs-source-dirs: test
+  type:               exitcode-stdio-1.0
+  main-is:            List.hs
+  hs-source-dirs:     test
+  build-depends:      ds-kanren
+                    , test-framework
+                    , test-framework-quickcheck
+                    , QuickCheck
+                    , base >=4 && <5
   default-language:    Haskell2010
