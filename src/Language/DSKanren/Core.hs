@@ -99,7 +99,7 @@ checkNeqs s@State{..} = foldr go (return s) neq
 -- | The opposite of unification. If any future unification would
 -- cause these two terms to become equal we'll backtrack.
 (=/=) :: Term -> Term -> Predicate
-(=/=) l r = Predicate $ \s@State{..} -> return s{neq = (l, r) : neq}
+(=/=) l r = Predicate $ \s@State{..} -> checkNeqs s{neq = (l, r) : neq}
 
 -- | Generate a fresh (not rigid) term to use for our program.
 fresh :: (Term -> Predicate) -> Predicate
