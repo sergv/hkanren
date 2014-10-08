@@ -31,9 +31,15 @@ freshClosed :: TestTree
 freshClosed = testProperty "Closed Under Fresh"
               . forPred
               $ \p -> hasSolution p ==> hasSolution (fresh $ const p)
+freshUnify :: TestTree
+freshUnify = testProperty "Unification Under Fresh"
+             . forTerm
+             $ \t -> forPred $ \p ->
+             hasSolution p
+             ==> hasSolution . fresh $ \v -> conj (t === v) p
 
 freshTests :: TestTree
-freshTests = testGroup "Fresh" [freshClosed]
+freshTests = testGroup "Fresh" [freshClosed, freshUnify]
 
 conjid :: TestTree
 conjid = testProperty "Commutative"
@@ -44,8 +50,7 @@ conjcomm :: TestTree
 conjcomm = testProperty "Commutative"
               . forPred2
               $ \p o ->
-                 hasSolution (conj p o)
-                 ==> hasSolution (conj o p)
+                 hasSolution (conj p o) ==> hasSolution (conj o p)
 
 conjTests :: TestTree
 conjTests = testGroup "Conj" [conjid, conjcomm]
