@@ -8,21 +8,21 @@ import QuickCheckHelper
 reflexive :: TestTree
 reflexive = testProperty "Reflexivity"
             . forAll (mkTerm [currentGoal])
-            $ \t -> hasSolution (const $ t === t)
+            $ \t -> hasSolution (t === t)
 
 commutative :: TestTree
 commutative = testProperty "Commutative"
               . forAll (two $ mkTerm [currentGoal])
               $ \ (l, r) ->
-                 hasSolution (const $ l === r)
-                 ==> hasSolution (const $ r === l)
+                 hasSolution (l === r)
+                 ==> hasSolution (r === l)
 
 trans :: TestTree
 trans = testProperty "Transitive"
         . forAll (three $ mkTerm [currentGoal])
         $ \(l, m, r) ->
-               hasSolution (const $ conj (l === m) (m === r))
-           ==> hasSolution (const $ r === l)
+               hasSolution (conj (l === m) (m === r))
+           ==> hasSolution (r === l)
 
 main :: IO ()
 main = defaultMain . testGroup "List Tests" $

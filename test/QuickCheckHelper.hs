@@ -3,9 +3,9 @@ import Control.Applicative
 import Language.DSKanren
 import Test.QuickCheck hiding ((===))
 
-hasSolution :: (Term -> Predicate) -> Bool
+hasSolution :: Predicate -> Bool
 hasSolution = runFor1
-  where runFor1 p = case run p of
+  where runFor1 p = case run (const p) of
           _ : _ -> True
           []    -> False
 
