@@ -34,7 +34,7 @@ data Term = Var Var        -- ^ Logical variables that can unify with other term
 instance Show Term where
   show t = case t of
     Var v -> show v
-    Atom a -> a
+    Atom a -> '\'' : a
     Pair l r -> "(" ++ show l ++ ", " ++ show r ++ ")"
 
 instance IsString Term where
