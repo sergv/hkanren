@@ -21,9 +21,8 @@ trans :: TestTree
 trans = testProperty "Transitive"
         . forAll (three $ mkTerm [currentGoal])
         $ \(l, m, r) ->
-               hasSolution (const $ l === m)
-           ==> hasSolution (const $ m === r)
-           ==> hasSolution (const $ l === r)
+               hasSolution (const $ conj (l === m) (m === r))
+           ==> hasSolution (const $ r === l)
 
 main :: IO ()
 main = defaultMain . testGroup "List Tests" $

@@ -17,11 +17,12 @@ three :: Applicative f => f a -> f (a, a, a)
 three f = (,,) <$> f <*> f <*> f
 
 mkTerm :: [Term] -> Gen Term
-mkTerm vars =
-  oneof
-  [ Atom <$> arbitrary
-  , Pair <$> mkTerm vars <*> mkTerm vars
-  , elements vars ]
+mkTerm vars = oneof $
+  case vars of
+   [] -> closedConstructs
+   _  -> elements vars : closedConstructs
+  where closedConstructs = [ Atom <$> (listOf . elements $ ['a' .. 'z'])
+                           , Pair <$> mkTerm vars <*> mkTerm vars]
 
 mkPred :: [Term] -> Gen Predicate
 mkPred vars = -- TODO, Fit fresh in here somehow
