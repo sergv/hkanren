@@ -1,6 +1,5 @@
 module Main where
-import Data.Monoid
-import Test.Framework
+import Test.Tasty
 
 main :: IO ()
-main = defaultMainWithOpts [] mempty
+main = defaultMain (testGroup "List Tests" [])

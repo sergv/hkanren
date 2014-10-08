@@ -1,7 +1,7 @@
 -- | Test to ensure that unification function as intended.
 module Main where
-import Data.Monoid
-import Test.Framework
+import Language.DSKanren
+import Test.Tasty
 
 main :: IO ()
-main = defaultMainWithOpts [] mempty
+main = defaultMain (testGroup "List Tests" [])
