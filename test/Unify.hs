@@ -1,5 +1,6 @@
 -- | Test to ensure that unification function as intended.
 module Main where
+import Control.Applicative
 import Language.DSKanren
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding ((===))
@@ -21,11 +22,18 @@ trans :: TestTree
 trans = testProperty "Transitive"
         . forAll (three $ mkTerm [currentGoal])
         $ \(l, m, r) ->
-               hasSolution (conj (l === m) (m === r))
+           hasSolution (conj (l === m) (m === r))
            ==> hasSolution (r === l)
+
+closedFresh :: TestTree
+closedFresh = testProperty "Closed Under Fresh"
+              . forAll (Blind <$> mkPred [currentGoal])
+              $ \(Blind p) ->
+                 hasSolution p ==> hasSolution (fresh $ const p)
 
 main :: IO ()
 main = defaultMain . testGroup "List Tests" $
        [ reflexive
        , commutative
-       , trans]
+       , trans
+       , closedFresh]
