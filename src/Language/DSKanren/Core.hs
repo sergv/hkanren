@@ -10,6 +10,7 @@ module Language.DSKanren.Core ( Term(..)
                               , Predicate
                               , failure
                               , success
+                              , currentGoal
                               , run ) where
 import           Control.Monad.Logic
 import           Data.String
@@ -128,6 +129,11 @@ failure = Predicate $ const mzero
 -- is also an identity for 'conj'.
 success :: Predicate
 success = Predicate return
+
+-- | The goal that this logic program is trying to create. This is
+-- occasionally useful when we're doing generating programs.
+currentGoal :: Term
+currentGoal = Var (V 0)
 
 -- | Run a program and find all solutions for the parametrized term.
 run :: (Term -> Predicate) -> [(Term, [Neq])]
