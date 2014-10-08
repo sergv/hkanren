@@ -1,6 +1,5 @@
 -- | Test to ensure that unification function as intended.
 module Main where
-import Control.Applicative
 import Language.DSKanren
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding ((===))
