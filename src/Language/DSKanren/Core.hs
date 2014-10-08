@@ -68,7 +68,11 @@ extend :: Var -> Term -> Sol -> Sol
 extend = M.insert
 
 -- | Unification cannot need not backtrack so this will either
--- universally succeed or failure.
+-- universally succeed or failure. Tricksy bit, we don't want to allow
+-- infinite terms since that can be narly. To preserve reflexivity, we
+-- have a special check for when we compare a var to itself. This
+-- doesn't extend the enviroment. With this special case we can add a
+-- check to make sure we never unify a var with a term containing it.
 unify :: Term -> Term -> Sol -> Maybe Sol
 unify l r sol= case (l, r) of
   (Atom a, Atom a') | a == a' -> Just sol
