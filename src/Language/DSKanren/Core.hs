@@ -27,8 +27,10 @@ suc :: Var -> Var
 suc (V i) = V (i + 1)
 
 -- | The terms of our logical language.
-data Term = Var Var        -- ^ Logical variables that can unify with other terms
-          | Atom String    -- ^ The equivalent of Scheme's symbols or keywords
+data Term = Var Var        -- ^ Logical variables that can unify with
+                           -- other terms
+          | Atom String    -- ^ The equivalent of Scheme's symbols or
+                           -- keywords
           | Pair Term Term -- ^ Pairs of terms
           deriving Eq
 
