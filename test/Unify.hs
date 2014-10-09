@@ -105,6 +105,7 @@ annihilatorConj = testProperty "Annihilates Disconj"
 failureTests :: TestTree
 failureTests = testGroup "Success" [annihilatorConj]
 
+------------------------- Main -----------------------------------------
 main :: IO ()
 main = defaultMain . testGroup "List Tests" $
        [ eqTests
