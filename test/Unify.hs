@@ -55,8 +55,15 @@ conjcomm = testProperty "Commutative"
               $ \p o ->
                  hasSolution (conj p o) ==> hasSolution (conj o p)
 
+conjassoc :: TestTree
+conjassoc = testProperty "Associative"
+            . forPred3
+            $ \l m r ->
+               hasSolution (conj (conj l m) r)
+               ==> hasSolution (conj l (conj m r))
+
 conjTests :: TestTree
-conjTests = testGroup "Conj" [conjid, conjcomm]
+conjTests = testGroup "Conj" [conjid, conjcomm, conjassoc]
 
 ------------------------- Disconj ------------------------------------
 disconjid :: TestTree
@@ -70,8 +77,15 @@ disconjcomm = testProperty "Commutative"
               $ \p o ->
                  hasSolution (disconj p o) ==> hasSolution (disconj o p)
 
+disconjassoc :: TestTree
+disconjassoc = testProperty "Associative"
+               . forPred3
+               $ \l m r ->
+                  hasSolution (disconj (disconj l m) r)
+                  ==> hasSolution (disconj l (disconj m r))
+
 disconjTests :: TestTree
-disconjTests = testGroup "Disconj" [disconjid, disconjcomm]
+disconjTests = testGroup "Disconj" [disconjid, disconjcomm, disconjassoc]
 
 ------------------------- Success --------------------------------------
 annihilatorDisconj :: TestTree

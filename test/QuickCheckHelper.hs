@@ -65,3 +65,7 @@ forPred = forAll (mkPred [currentGoal]) . (. toPredicate)
 forPred2 :: Testable a => (Predicate -> Predicate -> a) -> Property
 forPred2 p = forAll (two $ mkPred [currentGoal]) $
              \(l, r) -> p (toPredicate l) (toPredicate r)
+
+forPred3 :: Testable a => (Predicate -> Predicate -> Predicate -> a) -> Property
+forPred3 p = forAll (three $ mkPred [currentGoal]) $
+             \(l, m, r) -> p (toPredicate l) (toPredicate m) (toPredicate r)
