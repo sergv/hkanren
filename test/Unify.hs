@@ -28,6 +28,23 @@ eqtrans = testProperty "Transitive"
 eqTests :: TestTree
 eqTests = testGroup "Equality" [eqrefl, eqcomm, eqtrans]
 
+------------------------ Not Equal -----------------------------------
+neqarefl :: TestTree
+neqarefl = testProperty "Antireflexive"
+           . forTerm
+           $ \t -> not $ hasSolution (t =/= t)
+
+neqcomm :: TestTree
+neqcomm = testProperty "Commutative"
+          . forTerm2
+          $ \ l r ->
+             hasSolution (l =/= r)
+             ==> hasSolution (r =/= l)
+
+neqTests :: TestTree
+neqTests = testGroup "Inequality" [neqarefl, neqcomm]
+
+
 --------------------------- Fresh ------------------------------------
 freshClosed :: TestTree
 freshClosed = testProperty "Closed Under Fresh"
@@ -109,6 +126,7 @@ failureTests = testGroup "Success" [annihilatorConj]
 main :: IO ()
 main = defaultMain . testGroup "List Tests" $
        [ eqTests
+       , neqTests
        , freshTests
        , conjTests
        , disconjTests
