@@ -40,8 +40,8 @@ mkPred vars = -- TODO, Fit fresh in here somehow
   oneof
   [ Disconj <$> mkPred vars <*> mkPred vars
   , Conj    <$> mkPred vars <*> mkPred vars
-  , Eq   <$> mkTerm vars <*> mkTerm vars
-  , Neq   <$> mkTerm vars <*> mkTerm vars
+  , Eq      <$> mkTerm vars <*> mkTerm vars
+  , Neq     <$> mkTerm vars <*> mkTerm vars
   , elements [Tigger, Eeyore]]
 
 two :: Applicative f => f a -> f (a, a)
