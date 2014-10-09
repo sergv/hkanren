@@ -85,6 +85,8 @@ unify l r sol= case (l, r) of
   (t, Var i) | i `notIn` t -> Just (extend i t sol)
   _ -> Nothing
 
+-- | Represents inequalities. @(l, r)@ means that @l@ will not unify
+-- with @r@ within the current environment.
 type Neq = (Term, Term)
 data State = State { sol :: Sol
                    , var :: Var
