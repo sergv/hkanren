@@ -19,13 +19,9 @@ heado l h = fresh $ \t -> Pair h t === l
 tailo :: Term -> Term -> Predicate
 tailo l t = fresh $ \h -> Pair h t === l
 
--- These tests get crazy large.
-ensureIsSmallFast :: Property -> Property
-ensureIsSmallFast = within 2 . mapSize (const 3)
-
 isAppend :: TestTree
 isAppend = testProperty "Head Works"
-           . ensureIsSmallFast
+           . mapSize (const 3)
            . forAll (two . listOf1 $ mkTerm [])
            $ \(l, r) -> case runN 1 $ appendo (list l) (list r) of
                          (t, _) : _ -> t == list (l ++ r)
@@ -33,7 +29,7 @@ isAppend = testProperty "Head Works"
 
 isHead :: TestTree
 isHead = testProperty "Head Works"
-         . ensureIsSmallFast
+         . mapSize (const 3)
          . forAll (listOf1 $ mkTerm [])
          $ \terms -> case runN 1 $ heado (list terms) of
                       (t, _) : _ -> t == head terms
@@ -41,7 +37,7 @@ isHead = testProperty "Head Works"
 
 isTail :: TestTree
 isTail = testProperty "Tail Works"
-         . ensureIsSmallFast
+         . mapSize (const 3)
          . forAll (listOf1 $ mkTerm [])
          $ \terms -> case runN 1 $ tailo (list terms) of
                       (t, _) : _ -> t == list (tail terms)
