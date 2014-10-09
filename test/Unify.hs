@@ -73,9 +73,29 @@ disconjcomm = testProperty "Commutative"
 disconjTests :: TestTree
 disconjTests = testGroup "Disconj" [disconjid, disconjcomm]
 
+------------------------- Success --------------------------------------
+annihilatorDisconj :: TestTree
+annihilatorDisconj = testProperty "Annihilates Disconj"
+                     . forPred
+                     $ \p -> hasSolution (disconj success p)
+
+successTests :: TestTree
+successTests = testGroup "Success" [annihilatorDisconj]
+
+------------------------ Failure ---------------------------------------
+annihilatorConj :: TestTree
+annihilatorConj = testProperty "Annihilates Disconj"
+                     . forPred
+                     $ \p -> not $ hasSolution (conj failure p)
+
+failureTests :: TestTree
+failureTests = testGroup "Success" [annihilatorConj]
+
 main :: IO ()
 main = defaultMain . testGroup "List Tests" $
        [ eqTests
        , freshTests
        , conjTests
-       , disconjTests ]
+       , disconjTests
+       , successTests
+       , failureTests ]
