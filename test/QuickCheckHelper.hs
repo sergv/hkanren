@@ -28,12 +28,12 @@ hasSolution = runFor1
           []    -> False
 
 mkTerm :: [Term] -> Gen Term
-mkTerm vars = oneof $
+mkTerm vars = frequency $
   case vars of
    [] -> closedConstructs
-   _  -> elements vars : closedConstructs
-  where closedConstructs = [ Atom <$> (listOf . elements $ ['a' .. 'z'])
-                           , Pair <$> mkTerm vars <*> mkTerm vars]
+   _  -> (20, elements vars) : closedConstructs
+  where closedConstructs = [ (50, Atom <$> (listOf . elements $ ['a' .. 'z']))
+                           , (5, Pair <$> mkTerm vars <*> mkTerm vars)]
 
 mkPred :: [Term] -> Gen RPred
 mkPred vars = -- TODO, Fit fresh in here somehow

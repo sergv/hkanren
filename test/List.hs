@@ -14,33 +14,38 @@ appendo l r o =
                     , Pair h o' === o ]]
 
 heado :: Term -> Term -> Predicate
-heado h l = fresh $ \t -> Pair h t === l
+heado l h = fresh $ \t -> Pair h t === l
 
 tailo :: Term -> Term -> Predicate
-tailo t l = fresh $ \h -> Pair h t === l
+tailo l t = fresh $ \h -> Pair h t === l
 
+-- These tests get crazy large.
+ensureIsSmallFast :: Property -> Property
+ensureIsSmallFast = within 2 . mapSize (const 3)
 
 isAppend :: TestTree
 isAppend = testProperty "Head Works"
-           . forAll (two . listOf1 $ mkTerm [currentGoal])
+           . ensureIsSmallFast
+           . forAll (two . listOf1 $ mkTerm [])
            $ \(l, r) -> case runN 1 $ appendo (list l) (list r) of
                          (t, _) : _ -> t == list (l ++ r)
                          _ -> False
 
-
 isHead :: TestTree
 isHead = testProperty "Head Works"
-         . forAll (listOf1 $ mkTerm [currentGoal])
-         $ \terms -> case runN 1 $ \h -> heado h (list terms) of
+         . ensureIsSmallFast
+         . forAll (listOf1 $ mkTerm [])
+         $ \terms -> case runN 1 $ heado (list terms) of
                       (t, _) : _ -> t == head terms
                       _ -> False
 
 isTail :: TestTree
 isTail = testProperty "Tail Works"
-         . forAll (listOf1 $ mkTerm [currentGoal])
-         $ \terms -> case runN 1 $ \h -> tailo h (list terms) of
+         . ensureIsSmallFast
+         . forAll (listOf1 $ mkTerm [])
+         $ \terms -> case runN 1 $ tailo (list terms) of
                       (t, _) : _ -> t == list (tail terms)
                       _ -> False
 
 main :: IO ()
-main = defaultMain (testGroup "List Tests" [isAppend, isHead, isTail])
+main = defaultMain (testGroup "List Tests" [isHead, isTail])
