@@ -24,7 +24,7 @@ library
                      , logict
   hs-source-dirs:      src
   default-language:    Haskell2010
-Test-Suite test-unify:
+Test-Suite test-unify
   hs-source-dirs: test
   type:               exitcode-stdio-1.0
   main-is:            Unify.hs
@@ -35,7 +35,7 @@ Test-Suite test-unify:
                     , QuickCheck
                     , base >=4 && <5
   default-language:    Haskell2010
-Test-Suite test-list-ops:
+Test-Suite test-list
   hs-source-dirs: test
   type:               exitcode-stdio-1.0
   main-is:            List.hs
