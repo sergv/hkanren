@@ -30,6 +30,7 @@ suc (V i) = V (i + 1)
 data Term = Var Var        -- ^ Logical variables that can unify with other terms
           | Atom String    -- ^ The equivalent of Scheme's symbols or keywords
           | Pair Term Term -- ^ Pairs of terms
+          deriving Eq
 
 instance Show Term where
   show t = case t of
