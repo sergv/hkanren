@@ -1,4 +1,7 @@
 ## DS-Kanren
+
+[![build status][build]][travis]
+
 A subset implementation of the already small logical language!
 ds-kanren provides a simple way to write logical relations and queries
 in Haskell.
@@ -52,3 +55,5 @@ For this implementation in particular, it may be helpful to look at my
 [slpresi]: http://www.infoq.com/presentations/miniKanren
 [canonimpl]: https://github.com/miniKanren/miniKanren
 [post]: http://jozefg.bitbucket.org/posts/2014-07-10-reading-logict.html
+[build]: https://travis-ci.org/jozefg/ds-kanren.svg?branch=master
+[travis]: https://travis-ci.org/jozefg/ds-kanren
