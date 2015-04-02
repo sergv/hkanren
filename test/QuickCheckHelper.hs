@@ -1,39 +1,46 @@
+
 module QuickCheckHelper where
 import Control.Applicative
 import Language.DSKanren
-import Test.QuickCheck hiding ((===))
+import Test.QuickCheck hiding ((===), Success, Failure)
 
-data RPred = Conj RPred RPred
-           | Disconj RPred RPred
-           | Eq Term Term
-           | Neq Term Term
-           | Tigger
-           | Eeyore
-           deriving Show
+data RPred =
+    Conj RPred RPred
+  | Disconj RPred RPred
+  | Eq Term Term
+  | Neq Term Term
+  | Success
+  | Failure
+  deriving Show
 
 toPredicate :: RPred -> Predicate
 toPredicate t =
   case t of
-   Conj l r -> conj (toPredicate l) (toPredicate r)
-   Disconj l r -> disconj (toPredicate l) (toPredicate r)
-   Eq l r -> l === r
-   Neq l r -> l =/= r
-   Tigger -> success
-   Eeyore -> failure
+    Conj l r    -> conj (toPredicate l) (toPredicate r)
+    Disconj l r -> disconj (toPredicate l) (toPredicate r)
+    Eq l r      -> l === r
+    Neq l r     -> l =/= r
+    Success     -> success
+    Failure     -> failure
 
 hasSolution :: Predicate -> Bool
 hasSolution = runFor1
-  where runFor1 p = case run (const p) of
-          _ : _ -> True
-          []    -> False
+  where
+    runFor1 p = case run (const p) of
+      _ : _ -> True
+      []    -> False
 
 mkTerm :: [Term] -> Gen Term
 mkTerm vars = frequency $
   case vars of
    [] -> closedConstructs
-   _  -> (20, elements vars) : closedConstructs
-  where closedConstructs = [ (50, Atom <$> (listOf . elements $ ['a' .. 'z']))
-                           , (5, Pair <$> mkTerm vars <*> mkTerm vars)]
+   _  -> (4, elements vars) : closedConstructs
+  where
+    closedConstructs = [ (10, Atom <$> (listOf $ elements chars))
+                       , (1,  Pair <$> mkTerm vars <*> mkTerm vars)]
+
+chars :: [Char]
+chars = ['a' .. 'z']
 
 mkPred :: [Term] -> Gen RPred
 mkPred vars = -- TODO, Fit fresh in here somehow
@@ -42,7 +49,8 @@ mkPred vars = -- TODO, Fit fresh in here somehow
   , Conj    <$> mkPred vars <*> mkPred vars
   , Eq      <$> mkTerm vars <*> mkTerm vars
   , Neq     <$> mkTerm vars <*> mkTerm vars
-  , elements [Tigger, Eeyore]]
+  , elements [Success, Failure]
+  ]
 
 two :: Applicative f => f a -> f (a, a)
 two f = (,) <$> f <*> f

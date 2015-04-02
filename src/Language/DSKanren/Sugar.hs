@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Language.DSKanren.Sugar where
+
 import Language.DSKanren.Core
 
 -- | Disjunction of many clauses. This can be thought as a logical
@@ -24,8 +25,10 @@ class MkFresh a where
   -- | Instantiate @a@ with as many fresh terms as needed to produce a
   -- predicate.
   manyFresh :: a -> Predicate
+
 instance MkFresh a => MkFresh (Term -> a) where
   manyFresh = fresh . fmap manyFresh
+
 instance MkFresh Predicate where
   manyFresh = id
 

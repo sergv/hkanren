@@ -8,8 +8,8 @@ import QuickCheckHelper
 --------------------------- Equal -------------------------------------
 eqrefl :: TestTree
 eqrefl = testProperty "Reflexivity"
-            . forTerm
-            $ \t -> hasSolution (t === t)
+         . forTerm
+         $ \t -> hasSolution (t === t)
 
 eqcomm :: TestTree
 eqcomm = testProperty "Commutative"
@@ -124,11 +124,15 @@ failureTests = testGroup "Success" [annihilatorConj]
 
 ------------------------- Main -----------------------------------------
 main :: IO ()
-main = defaultMain . testGroup "List Tests" $
-       [ eqTests
-       , neqTests
-       , freshTests
-       , conjTests
-       , disconjTests
-       , successTests
-       , failureTests ]
+main = defaultMain $
+  adjustOption (const $ QuickCheckTests 1000) $
+  adjustOption (const $ QuickCheckMaxSize 1000) $
+  testGroup "Unify Tests" $
+    [ eqTests
+    , neqTests
+    , freshTests
+    , conjTests
+    , disconjTests
+    , successTests
+    , failureTests
+    ]

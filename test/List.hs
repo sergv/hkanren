@@ -44,4 +44,10 @@ isTail = testProperty "Tail Works"
                       _ -> False
 
 main :: IO ()
-main = defaultMain (testGroup "List Tests" [isHead, isTail])
+main = defaultMain $
+  adjustOption (const $ QuickCheckTests 1000) $
+  adjustOption (const $ QuickCheckMaxSize 1000) $
+  testGroup "List Tests"
+    [ isHead
+    , isTail
+    ]
