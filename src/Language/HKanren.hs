@@ -1,4 +1,4 @@
--- | /What's in ds-kanren?/
+-- | /What's in hkanren?/
 --
 -- ['disconj']
 --   Try the left and the right and gather solutions that satisfy
@@ -45,16 +45,16 @@
 -- [(foo, (bar, (foo, (bar, nil))))]
 --
 -- The toplevel module exports the core language, in
--- 'Language.DSKanren.Core' and some simple combinators from
--- 'Language.DSKanren.Sugar'.
+-- 'Language.HKanren.Core' and some simple combinators from
+-- 'Language.HKanren.Sugar'.
 
-module Language.DSKanren
-  ( module Language.DSKanren.Core
-  , module Language.DSKanren.Sugar
+module Language.HKanren
+  ( module Language.HKanren.Core
+  , module Language.HKanren.Syntax
   , mkLVar
   )
 where
 
-import Language.DSKanren.Core
-import Language.DSKanren.Subst
-import Language.DSKanren.Sugar
+import Language.HKanren.Core
+import Language.HKanren.Subst
+import Language.HKanren.Syntax

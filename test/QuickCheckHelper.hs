@@ -16,7 +16,7 @@ import Data.HOrdering
 import Data.HUtils
 import Data.Monoid
 import Data.Type.Equality
-import Language.DSKanren
+import Language.HKanren
 import Test.QuickCheck hiding ((===), Success, Failure)
 
 data Atom

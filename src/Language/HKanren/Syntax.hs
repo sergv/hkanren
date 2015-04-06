@@ -3,12 +3,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE RankNTypes          #-}
 
-module Language.DSKanren.Sugar where
+module Language.HKanren.Syntax where
 
 import Data.HOrdering
 import Data.HUtils
 import Data.List
-import Language.DSKanren.Core
+import Language.HKanren.Core
 
 -- | Disjunction of many clauses. This can be thought as a logical
 -- switch.

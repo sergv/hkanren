@@ -2,7 +2,7 @@
 module Main where
 
 import Data.HUtils
-import Language.DSKanren
+import Language.HKanren
 import Test.Tasty.QuickCheck hiding ((===))
 import Test.Tasty
 import QuickCheckHelper

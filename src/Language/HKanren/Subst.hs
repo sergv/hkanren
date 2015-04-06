@@ -16,7 +16,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Language.DSKanren.Subst
+module Language.HKanren.Subst
   ( Subst
   , extend
   , lookup

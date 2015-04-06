@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module Language.DSKanren.Core
+module Language.HKanren.Core
   ( Term
   , LVar
   , Neq
@@ -41,8 +41,8 @@ import qualified Data.Set as Set
 import Data.HOrdering
 import Data.HUtils
 
-import Language.DSKanren.Subst (Subst, Term, LVar, mkLVar)
-import qualified Language.DSKanren.Subst as S
+import Language.HKanren.Subst (Subst, Term, LVar, mkLVar)
+import qualified Language.HKanren.Subst as S
 
 class Unifiable (h :: (* -> *) -> (* -> *)) (g :: (* -> *) -> (* -> *)) where
   unify :: h (Term g) ix -> h (Term g) ix -> Subst g -> Maybe (Subst g)

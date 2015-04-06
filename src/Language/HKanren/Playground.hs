@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------
 -- |
--- Module      :  Language.DSKanren.Playground
+-- Module      :  Language.HKanren.Playground
 -- Copyright   :  (c) Sergey Vinokurov 2015
 -- License     :  BSD3-style (see LICENSE)
 --
@@ -25,7 +25,7 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module Language.DSKanren.Playground where
+module Language.HKanren.Playground where
 
 import Control.Monad
 import Data.Monoid
@@ -36,7 +36,7 @@ import qualified Data.HMap as HM
 import Data.HOrdering
 import Data.HUtils
 
-import Language.DSKanren.Core
+import Language.HKanren.Core
 
 -- traverse :: (Applicative f) => (a -> f b) -> t a -> f (t b)
 

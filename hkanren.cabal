@@ -1,28 +1,29 @@
-name:                ds-kanren
-version:             0.2.0.1
+name:                hkanren
+version:             0.1
 synopsis:            A subset of the miniKanren language
 description:
-  ds-kanren is an implementation of the <http://minikanren.org miniKanren> language.
+  hkanren is an implementation of the <http://minikanren.org miniKanren> language.
 
 license:             MIT
 license-file:        LICENSE
-author:              Danny Gratzer
-maintainer:          jozefg@cmu.edu
+author:              Danny Gratzer, Sergey Vinokuron
+maintainer:          serg.foo@gmail.com
 category:            Language
 build-type:          Simple
 cabal-version:       >=1.10
+
 source-repository head
-  type:     hg
-  location: http://bitbucket.org/jozefg/ds-kanren
+  type:     git
+  location: https://github.com/sergv/hkanren.git
 
 library
   exposed-modules:     Data.HMap
                      , Data.HOrdering
                      , Data.HUtils
-                     , Language.DSKanren
-                     , Language.DSKanren.Core
-                     , Language.DSKanren.Sugar
-  other-modules:       Language.DSKanren.Subst
+                     , Language.HKanren
+                     , Language.HKanren.Core
+  other-modules:       Language.HKanren.Subst
+                     , Language.HKanren.Syntax
   build-depends:       base >=4 && <5
                      , containers >=0.4
                      , logict
@@ -35,22 +36,22 @@ library
                        -ferror-spans -rtsopts
 
 executable           playground
-  build-depends:     base >= 4.7, containers, logict, ds-kanren
-  main-is:           src/Language/DSKanren/Playground.hs
+  build-depends:     base >= 4.7, containers, logict, hkanren
+  main-is:           src/Language/HKanren/Playground.hs
   default-language:  Haskell2010
   ghc-options:       -W -Wall
                      -fwarn-monomorphism-restriction
                      -fno-warn-type-defaults
                      -fno-warn-name-shadowing
                      -ferror-spans -rtsopts
-                     -main-is Language.DSKanren.Playground
+                     -main-is Language.HKanren.Playground
 
 test-suite test-unify
   hs-source-dirs: test
   type:               exitcode-stdio-1.0
   main-is:            Unify.hs
   hs-source-dirs:     test
-  build-depends:      ds-kanren
+  build-depends:      hkanren
                     , tasty
                     , tasty-quickcheck
                     , QuickCheck
@@ -62,7 +63,7 @@ test-suite test-list
   type:               exitcode-stdio-1.0
   main-is:            List.hs
   hs-source-dirs:     test
-  build-depends:      ds-kanren
+  build-depends:      hkanren
                     , tasty
                     , tasty-quickcheck
                     , QuickCheck
