@@ -1,22 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
+
+import Data.HUtils
 import Language.DSKanren
 import Test.Tasty.QuickCheck hiding ((===))
 import Test.Tasty
 import QuickCheckHelper
 
-appendo :: Term -> Term -> Term -> Predicate
+appendo :: LispTermF LispTerm ix -> LispTermF LispTerm ix -> LispTermF LispTerm ix -> Predicate LispTermF
 appendo l r o =
-  conde [ program [l === "nil", o === r]
-        , manyFresh $ \h t o' ->
-            program [ Pair h t === l
-                    , appendo t r o'
-                    , Pair h o' === o ]]
+  conde [ program [ l === inj (Atom "nil")
+                  , o === r
+                  ]
+        , fresh templateAtom $ \h ->
+            fresh templatePair $ \t ->
+              fresh templatePair $ \o' ->
+                program [ inject (Pair h t) === l
+                        , appendo t r o'
+                        , inject (Pair h o') === o
+                        ]
+        ]
 
-heado :: Term -> Term -> Predicate
+heado :: LispTerm ix -> LispTerm ix -> Predicate LispTermF
 heado l h = fresh $ \t -> Pair h t === l
 
-tailo :: Term -> Term -> Predicate
+tailo :: LispTerm ix -> LispTerm ix -> Predicate LispTermF
 tailo l t = fresh $ \h -> Pair h t === l
 
 isAppend :: TestTree

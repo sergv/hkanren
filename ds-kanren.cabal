@@ -16,7 +16,10 @@ source-repository head
   location: http://bitbucket.org/jozefg/ds-kanren
 
 library
-  exposed-modules:     Language.DSKanren
+  exposed-modules:     Data.HMap
+                     , Data.HOrdering
+                     , Data.HUtils
+                     , Language.DSKanren
                      , Language.DSKanren.Core
                      , Language.DSKanren.Sugar
   other-modules:       Language.DSKanren.Subst
@@ -25,6 +28,22 @@ library
                      , logict
   hs-source-dirs:      src
   default-language:    Haskell2010
+  ghc-options:         -W -Wall
+                       -fwarn-monomorphism-restriction
+                       -fno-warn-type-defaults
+                       -fno-warn-name-shadowing
+                       -ferror-spans -rtsopts
+
+executable           playground
+  build-depends:     base >= 4.7, containers, logict, ds-kanren
+  main-is:           src/Language/DSKanren/Playground.hs
+  default-language:  Haskell2010
+  ghc-options:       -W -Wall
+                     -fwarn-monomorphism-restriction
+                     -fno-warn-type-defaults
+                     -fno-warn-name-shadowing
+                     -ferror-spans -rtsopts
+                     -main-is Language.DSKanren.Playground
 
 test-suite test-unify
   hs-source-dirs: test

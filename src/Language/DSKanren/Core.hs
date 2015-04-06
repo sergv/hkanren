@@ -1,8 +1,22 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE DeriveFoldable        #-}
+{-# LANGUAGE DeriveTraversable     #-}
+{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Language.DSKanren.Core
-  ( Term(..)
-  , Var
+  ( Term
+  , LVar
   , Neq
   , (===)
   , (=/=)
@@ -12,87 +26,94 @@ module Language.DSKanren.Core
   , Predicate
   , failure
   , success
-  , currentGoal
   , run
+  , Unifiable(..)
+  , unifyTerms
   )
 where
 
 import Control.Monad.Logic
-import Data.String
+import Data.Maybe
+import Data.Monoid
+import Data.Set (Set)
+import qualified Data.Set as Set
 
-import Language.DSKanren.Subst (Subst, Var, suc, initV)
+import Data.HOrdering
+import Data.HUtils
+
+import Language.DSKanren.Subst (Subst, Term, LVar, mkLVar)
 import qualified Language.DSKanren.Subst as S
 
+class Unifiable (h :: (* -> *) -> (* -> *)) (g :: (* -> *) -> (* -> *)) where
+  unify :: h (Term g) ix -> h (Term g) ix -> Subst g -> Maybe (Subst g)
 
--- | The terms of our logical language.
-data Term =
-    Var Var        -- ^ Logical variables that can unify with other terms
-  | Atom String    -- ^ The equivalent of Scheme's symbols or keywords
-  | Pair Term Term -- ^ Pairs of terms
-  deriving (Eq, Ord)
+instance (Unifiable f g, Unifiable f' g) => Unifiable (f :+: f') g where
+  unify (Inl x) (Inl y) = unify x y
+  unify (Inr x) (Inr y) = unify x y
+  unify _       _       = const Nothing
 
-instance Show Term where
-  show t = case t of
-    Var v    -> show v
-    Atom a   -> '\'' : a
-    Pair l r -> "(" ++ show l ++ ", " ++ show r ++ ")"
+unifyTerms
+  :: (HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+  => HFree h (LVar h) ix -> HFree h (LVar h) ix -> Subst h -> Maybe (Subst h)
+unifyTerms (HPure x) y'@(HPure y) s
+  | x ==* y   = Just s
+  | otherwise = Just $ S.extend x y' s
+unifyTerms (HPure x) y s
+  | occursCheck x y = Nothing
+  | otherwise       = Just $ S.extend x y s
+unifyTerms x (HPure y) s
+  | occursCheck y x = Nothing
+  | otherwise       = Just $ S.extend y x s
+unifyTerms (HFree h) (HFree h') s = unify h h' s
 
-instance IsString Term where
-  fromString = Atom
+-- | Check whether given logical variable appears inside another term.
+occursCheck :: forall h ix. (HFoldable h, HOrdIx (h HUnit)) => LVar h ix -> HFree h (LVar h) ix -> Bool
+occursCheck var = getAny . go
+  where
+    go :: HFree h (LVar h) ix' -> Any
+    go (HPure var') = Any $ var ==* var'
+    go (HFree h)    = hfoldMap go h
 
 
 -- | Substitute all bound variables in a term giving the canonical
 -- term in an environment. Sometimes the solution isn't canonical,
 -- so some ugly recursion happens. Happily we don't have to prove
 -- normalization.
-canonize :: Subst Term -> Term -> Term
-canonize subst t = case t of
-  Atom a   -> t
-  Pair l r -> canonize subst l `Pair` canonize subst r
-  Var v    -> maybe t (canonize $ S.delete v subst) $ S.lookup v subst
-
--- | Occurs check.
---
--- Ensures that a variable doesn't occur in some other term. This
--- prevents us from getting some crazy infinite term. None of that
--- nonsense.
-notIn :: Var -> Term -> Bool
-notIn v t = case t of
-  Var v'   -> v /= v'
-  Atom _   -> True
-  Pair l r -> notIn v l && notIn v r
-
--- | Unification cannot need not backtrack so this will either
--- universally succeed or failure. Tricksy bit, we don't want to allow
--- infinite terms since that can be narly. To preserve reflexivity, we
--- have a special check for when we compare a var to itself. This
--- doesn't extend the enviroment. With this special case we can add a
--- check to make sure we never unify a var with a term containing it.
-unify :: Term -> Term -> Subst Term -> Maybe (Subst Term)
-unify l r subst = go l r
+canonize :: forall h ix. (HFunctor h, HOrdIx (h HUnit)) => Subst h -> Term h ix -> Term h ix
+canonize subst = go Set.empty
   where
-    go (Atom a) (Atom a')
-      | a == a'                = Just subst
-    go (Pair h t) (Pair h' t') = unify h h' subst >>= unify t t'
-    go (Var v) (Var v')
-      | v == v'                = Just subst
-    go (Var v) t
-      | v `notIn` t            = Just (S.extend v t subst)
-    go t (Var v)
-      | v `notIn` t            = Just (S.extend v t subst)
-    go _  _                    = Nothing
+    go :: Set (Some (LVar h)) -> Term h ix' -> Term h ix'
+    go usedVars t =
+      case t of
+        HPure v
+          | Set.member v' usedVars -> t
+          | otherwise              ->
+            maybe t (go usedVars') $ S.lookup v subst
+          where
+            usedVars' = Set.insert v' usedVars
+            v' = Some v
+        HFree x -> HFree $ hfmap (go usedVars) x
+
+        -- Atom _   -> t
+        -- Pair l r -> go usedVars l `Pair` go usedVars r
+        -- Var v
+        --   | Set.member v usedVars -> t
+        --   | otherwise             ->
+        --     maybe t (go usedVars') $ S.lookup v subst
+        --   where
+        --     usedVars' = Set.insert v usedVars
 
 -- | Represents inequalities. @(l, r)@ means that @l@ will not unify
 -- with @r@ within the current environment.
-type Neq = (Term, Term)
+data Neq h ix = Neq (Term h ix) (Term h ix)
 
-data State = State
-  { subst :: Subst Term
-  , var   :: Var
-  , neq   :: [Neq]
+data State h = State
+  { subst      :: Subst h
+  , freeVarIdx :: Integer
+  , neq        :: [Some (Neq h)]
   }
 
-newtype Predicate = Predicate { unPred :: State -> Logic State }
+newtype Predicate h = Predicate { unPred :: State h -> Logic (State h) }
 
 -- | Validate the inqualities still hold.
 -- To do this we try to unify each pair under the current
@@ -100,12 +121,12 @@ newtype Predicate = Predicate { unPred :: State -> Logic State }
 -- make sure that the solution under which they unify is an
 -- extension of the solution set, ie we must add more facts
 -- to get a contradiction.
-checkNeqs :: State -> Logic State
+checkNeqs :: forall h. (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit)) => State h -> Logic (State h)
 checkNeqs s@State{..} = foldr go (return s) neq
   where
-    go :: Neq -> Logic State -> Logic State
-    go (l, r) m =
-      case unify (canonize subst l) (canonize subst r) subst of
+    go :: Some (Neq h) -> Logic (State h) -> Logic (State h)
+    go (Some (Neq l r)) m =
+      case unifyTerms (canonize subst l) (canonize subst r) subst of
         Nothing -> m
         Just badSubst
           | S.domain badSubst == S.domain subst -> mzero
@@ -113,54 +134,60 @@ checkNeqs s@State{..} = foldr go (return s) neq
 
 -- | Equating two terms will attempt to unify them and backtrack if
 -- this is impossible.
-(===) :: Term -> Term -> Predicate
+(===) :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+      => Term h ix -> Term h ix -> Predicate h
 (===) l r = Predicate $ \s@State {..} ->
-  case unify (canonize subst l) (canonize subst r) subst of
+  case unifyTerms (canonize subst l) (canonize subst r) subst of
     Just subst' -> checkNeqs s { subst = subst' }
-    Nothing   -> mzero
+    Nothing     -> mzero
 
 -- | The opposite of unification. If any future unification would
 -- cause these two terms to become equal we'll backtrack.
-(=/=) :: Term -> Term -> Predicate
-(=/=) l r = Predicate $ \s@State{..} -> checkNeqs s { neq = (l, r) : neq }
+(=/=) :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+      => Term h ix -> Term h ix -> Predicate h
+(=/=) l r = Predicate $ \s@State{..} -> checkNeqs s { neq = Some (Neq l r) : neq }
 
 -- | Generate a fresh (not rigid) term to use for our program.
-fresh :: (Term -> Predicate) -> Predicate
-fresh withTerm = Predicate $
-  \State{..} ->
-    unPred (withTerm $ Var var) $ State subst (suc var) neq
+fresh :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+      => h f ix -> (Term h ix -> Predicate h) -> Predicate h
+fresh termTemplate withTerm = Predicate $
+  \s@(State{freeVarIdx}) ->
+    unPred (withTerm $ HPure $ mkLVar freeVarIdx termTemplate) $ s { freeVarIdx = freeVarIdx + 1 }
 
 -- | Conjunction. This will return solutions that satsify both the
 -- first and second predicate.
-conj :: Predicate -> Predicate -> Predicate
+conj :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+     => Predicate h -> Predicate h -> Predicate h
 conj p1 p2 = Predicate $ \s -> unPred p1 s >>- unPred p2
 
 -- | Disjunction. This will return solutions that satisfy either the
 -- first predicate or the second.
-disconj :: Predicate -> Predicate -> Predicate
+disconj :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+        => Predicate h -> Predicate h -> Predicate h
 disconj p1 p2 = Predicate $ \s -> unPred p1 s `interleave` unPred p2 s
 
 -- | The always failing predicate. This is mostly useful as
 -- a way of pruning out various conditions, as in
 -- @'conj' (a '===' b) 'failure'@. This is also an identity for
 -- 'disconj'.
-failure :: Predicate
+failure :: Predicate h
 failure = Predicate $ const mzero
 
 -- | The always passing predicate. This isn't very useful
 -- on it's own, but is helpful when building up new combinators. This
 -- is also an identity for 'conj'.
-success :: Predicate
+success :: Predicate h
 success = Predicate return
 
--- | The goal that this logic program is trying to create. This is
--- occasionally useful when we're doing generating programs.
-currentGoal :: Term
-currentGoal = Var initV
-
 -- | Run a program and find all solutions for the parametrized term.
-run :: (Term -> Predicate) -> [(Term, [Neq])]
-run mkProg = map answer $ observeAll prog
+run :: forall h f ix. (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+    => h f ix -> (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
+run termTemplate mkProg = catMaybes $ map answer $ observeAll prog
   where
-    prog = unPred (fresh mkProg) (State S.empty initV [])
-    answer State{..} = (canonize subst $ Var initV, neq)
+    initVar = 0
+    prog = unPred (fresh termTemplate mkProg) (State S.empty initVar [])
+    answer :: State h -> Maybe (Some (Term h), [Some (Neq h)])
+    answer State{subst, neq} =
+      case S.lookupVar initVar subst of
+        Just (Some t) -> Just (Some $ canonize subst t, neq)
+        Nothing       -> Nothing

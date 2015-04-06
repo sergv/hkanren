@@ -51,8 +51,10 @@
 module Language.DSKanren
   ( module Language.DSKanren.Core
   , module Language.DSKanren.Sugar
+  , mkLVar
   )
 where
 
 import Language.DSKanren.Core
+import Language.DSKanren.Subst
 import Language.DSKanren.Sugar
