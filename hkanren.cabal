@@ -35,28 +35,28 @@ library
                        -fno-warn-name-shadowing
                        -ferror-spans -rtsopts
 
-executable           playground
-  build-depends:     base >= 4.7, containers, logict, hkanren
-  main-is:           src/Language/HKanren/Playground.hs
-  default-language:  Haskell2010
-  ghc-options:       -W -Wall
-                     -fwarn-monomorphism-restriction
-                     -fno-warn-type-defaults
-                     -fno-warn-name-shadowing
-                     -ferror-spans -rtsopts
-                     -main-is Language.HKanren.Playground
+-- executable           playground
+--   build-depends:     base >= 4.7, containers, logict, hkanren
+--   main-is:           src/Language/HKanren/Playground.hs
+--   default-language:  Haskell2010
+--   ghc-options:       -W -Wall
+--                      -fwarn-monomorphism-restriction
+--                      -fno-warn-type-defaults
+--                      -fno-warn-name-shadowing
+--                      -ferror-spans -rtsopts
+--                      -main-is Language.HKanren.Playground
 
-test-suite test-unify
-  hs-source-dirs: test
-  type:               exitcode-stdio-1.0
-  main-is:            Unify.hs
-  hs-source-dirs:     test
-  build-depends:      hkanren
-                    , tasty
-                    , tasty-quickcheck
-                    , QuickCheck
-                    , base >=4 && <5
-  default-language:    Haskell2010
+-- test-suite test-unify
+--   hs-source-dirs: test
+--   type:               exitcode-stdio-1.0
+--   main-is:            Unify.hs
+--   hs-source-dirs:     test
+--   build-depends:      hkanren
+--                     , tasty
+--                     , tasty-quickcheck
+--                     , QuickCheck
+--                     , base >=4 && <5
+--   default-language:    Haskell2010
 
 test-suite test-list
   hs-source-dirs: test
@@ -65,6 +65,7 @@ test-suite test-list
   hs-source-dirs:     test
   build-depends:      hkanren
                     , tasty
+                    , tasty-hunit
                     , tasty-quickcheck
                     , QuickCheck
                     , base >=4 && <5

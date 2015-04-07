@@ -58,7 +58,7 @@ data NameF (f :: * -> *) ix where
 -- instance HEq (NameF f) where
 --   heq (Name n) (Name m) = n == m
 --
--- instance HEqIx (NameF f) where
+-- instance HEqHet (NameF f) where
 --   heqIx (Name _) (Name _) = Just Refl
 
 instance HFunctor NameF where
@@ -141,24 +141,24 @@ instance Unifiable NameF g where
     | n == m    = Just s
     | otherwise = Nothing
 
-instance (HFoldable g, Unifiable g g, HOrdIx (g HUnit)) => Unifiable ListF g where
+instance (HFoldable g, Unifiable g g, HOrdHet (g HUnit)) => Unifiable ListF g where
   unify Nil         Nil         = Just
   unify (Cons x xs) (Cons y ys) = unifyTerms x y >=> unify xs ys
   unify _           _           = const Nothing
 
-instance (HFoldable g, Unifiable g g, HOrdIx (g HUnit)) => Unifiable VarF g where
+instance (HFoldable g, Unifiable g g, HOrdHet (g HUnit)) => Unifiable VarF g where
   unify (Var x) (Var y) s = unifyTerms x y s
 
 -- | It is crucial to bind unifications into one another so that updated
 -- substitutions get propagated!
-instance (HFoldable g, Unifiable g g, HOrdIx (g HUnit)) => Unifiable AddF g where
+instance (HFoldable g, Unifiable g g, HOrdHet (g HUnit)) => Unifiable AddF g where
   unify (Add x y) (Add x' y') = unifyTerms x x' >=> unifyTerms y y'
 
-instance (HFoldable g, Unifiable g g, HOrdIx (g HUnit)) => Unifiable SetF g where
+instance (HFoldable g, Unifiable g g, HOrdHet (g HUnit)) => Unifiable SetF g where
   unify (Set name expr) (Set name' expr') =
     unifyTerms name name' >=> unifyTerms expr expr'
 
-instance (HFoldable g, Unifiable g g, HOrdIx (g HUnit)) => Unifiable FunctionF g where
+instance (HFoldable g, Unifiable g g, HOrdHet (g HUnit)) => Unifiable FunctionF g where
   unify (Function name args body ret) (Function name' args' body' ret') =
     unifyTerms name name' >=> unifyTerms args args' >=> unifyTerms body body' >=> unifyTerms ret ret'
 

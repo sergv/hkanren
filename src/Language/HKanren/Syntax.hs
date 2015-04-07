@@ -9,24 +9,25 @@ import Data.HOrdering
 import Data.HUtils
 import Data.List
 import Language.HKanren.Core
+import Language.HKanren.Subst (Type, TypeRep)
 
 -- | Disjunction of many clauses. This can be thought as a logical
 -- switch.
-conde :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+conde :: (HFoldable h, Unifiable h h, HOrdHet (h HUnit))
       => [Predicate h] -> Predicate h
 conde = foldr disconj failure
 
 -- | Conjuction of many clauses. Think of this as a sort of logical
 -- semicolon.
-program :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+program :: (HFoldable h, Unifiable h h, HOrdHet (h HUnit))
         => [Predicate h] -> Predicate h
 program = foldr conj success
 
 -- | Only grab n solutions. Useful for when the full logic program
 -- might not terminate. Or takes its sweet time to do so.
-runN :: forall h f ix. (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
-     => Integer -> h f ix -> (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
-runN n template = genericTake n . run template
+runN :: forall h ix. (TypeRep h, HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type h))
+     => Integer -> Type h ix -> (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
+runN n t = genericTake n . run t
 
 -- -- | We often want to introduce many fresh variables at once. We've
 -- -- encoded this in DSKanren with the usual type class hackery for

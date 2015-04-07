@@ -52,6 +52,10 @@ module Language.HKanren
   ( module Language.HKanren.Core
   , module Language.HKanren.Syntax
   , mkLVar
+  , TypeRep(..)
+  , Type
+  , Subst
+  , FunctorOf
   )
 where
 

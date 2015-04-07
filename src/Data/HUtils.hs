@@ -11,20 +11,21 @@
 --
 ----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveFunctor         #-}
-{-# LANGUAGE DeriveFoldable        #-}
-{-# LANGUAGE DeriveTraversable     #-}
-{-# LANGUAGE EmptyDataDecls        #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE KindSignatures        #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverlappingInstances  #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveFoldable             #-}
+{-# LANGUAGE DeriveTraversable          #-}
+{-# LANGUAGE EmptyDataDecls             #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module Data.HUtils where
 
@@ -34,36 +35,44 @@ import Data.Type.Equality
 newtype HFix (f :: (* -> *) -> (* -> *)) ix =
   HFix { unHFix :: f (HFix f) ix }
 
+deriving instance (HEq (f (HFix f))) => HEq (HFix f)
+deriving instance (HEqHet (f (HFix f))) => HEqHet (HFix f)
+deriving instance (HOrd (f (HFix f))) => HOrd (HFix f)
+deriving instance (HOrdHet (f (HFix f))) => HOrdHet (HFix f)
+
+hcata :: (HFunctor f) => (f a :-> a) -> HFix f :-> a
+hcata alg = alg . hfmap (hcata alg) . unHFix
+
 data (:*:) (f :: * -> *) (g :: * -> *) ix =
   f ix :*: g ix
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 infixr 7 :*:
 
-data (:+:) (f :: (* -> *) -> (* -> *)) (g :: (* -> *) -> (* -> *)) (e :: * -> *) ix =
-    Inl (f e ix)
-  | Inr (g e ix)
+data (:+:) (f :: (* -> *) -> (* -> *)) (g :: (* -> *) -> (* -> *)) (r :: * -> *) ix =
+    Inl (f r ix)
+  | Inr (g r ix)
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 infixr 6 :+:
 
-instance (HEq (f e), HEq (g e)) => HEq ((:+:) f g e) where
+instance (HEq (f r), HEq (g r)) => HEq ((:+:) f g r) where
   heq (Inl x) (Inl y) = heq x y
   heq (Inr x) (Inr y) = heq x y
   heq _       _       = False
 
-instance (HEqIx (f e), HEqIx (g e)) => HEqIx ((:+:) f g e) where
+instance (HEqHet (f r), HEqHet (g r)) => HEqHet ((:+:) f g r) where
   heqIx (Inl x) (Inl y) = heqIx x y
   heqIx (Inr x) (Inr y) = heqIx x y
   heqIx _       _       = Nothing
 
-instance (HOrd (f e), HOrd (g e)) => HOrd ((:+:) f g e) where
+instance (HOrd (f r), HOrd (g r)) => HOrd ((:+:) f g r) where
   hcompare (Inl x) (Inl y) = hcompare x y
   hcompare (Inr x) (Inr y) = hcompare x y
   hcompare (Inl _) (Inr _) = LT
   hcompare (Inr _) (Inl _) = GT
 
-instance (HOrdIx (f e), HOrdIx (g e)) => HOrdIx ((:+:) f g e) where
+instance (HOrdHet (f r), HOrdHet (g r)) => HOrdHet ((:+:) f g r) where
   hcompareIx (Inl x) (Inl y) = hcompareIx x y
   hcompareIx (Inr x) (Inr y) = hcompareIx x y
   hcompareIx (Inl _) (Inr _) = HLT
@@ -75,6 +84,13 @@ type NatM m f g = forall ix. f ix -> m (g ix)
 
 infixr 0 :->
 infixr 0 :=>
+
+class HFunctorId (h :: (* -> *) -> (* -> *)) where
+  hfmapId :: (f :-> f) -> h f :-> h f
+
+instance (HFunctorId f, HFunctorId g) => HFunctorId ((:+:) f g) where
+  hfmapId f (Inl h)  = Inl $ hfmapId f h
+  hfmapId f (Inr h') = Inr $ hfmapId f h'
 
 class HFunctor (h :: (* -> *) -> (* -> *)) where
   hfmap :: (f :-> g) -> h f :-> h g
@@ -98,13 +114,23 @@ instance (HTraversable f, HTraversable g) => HTraversable ((:+:) f g) where
   htraverse f (Inr h') = Inr <$> htraverse f h'
 
 
-data Free f a =
-    Pure a
-  | Free (f (Free f a))
+-- data Free f a =
+--     Pure a
+--   | Free (f (Free f a))
 
-data HFree (f :: (* -> *) -> (* -> *)) a ix =
+data HFree (f :: (* -> *) -> (* -> *)) (a :: * -> *) ix =
     HPure (a ix)
   | HFree (f (HFree f a) ix)
+
+instance (HEq (f (HFree f a)), HEq a) => HEq (HFree f a) where
+  heq (HPure x) (HPure y) = heq x y
+  heq (HFree x) (HFree y) = heq x y
+  heq _         _         = False
+
+instance (HEqHet (f (HFree f a)), HEqHet a) => HEqHet (HFree f a) where
+  heqIx (HPure x) (HPure y) = heqIx x y
+  heqIx (HFree x) (HFree y) = heqIx x y
+  heqIx _         _         = Nothing
 
 newtype K a b = K a
   deriving (Show, Eq, Ord)
@@ -112,13 +138,13 @@ newtype K a b = K a
 instance (Eq a) => HEq (K a) where
   heq (K x) (K y) = x == y
 
-instance (Eq a) => HEqIx (K a) where
+instance (Eq a) => HEqHet (K a) where
   heqIx (K _) (K _) = Nothing
 
 instance (Ord a) => HOrd (K a) where
   hcompare (K x) (K y) = compare x y
 
-instance (Ord a) => HOrdIx (K a) where
+instance (Ord a) => HOrdHet (K a) where
   hcompareIx (K x) (K y) =
     case compare x y of
       LT -> HLT
@@ -129,10 +155,10 @@ type HUnit = K ()
 
 data Some f = forall ix. Some (f ix)
 
-instance (HEqIx f) => Eq (Some f) where
+instance (HEqHet f) => Eq (Some f) where
   Some x == Some y = x ==* y
 
-instance (HOrdIx f) => Ord (Some f) where
+instance (HOrdHet f) => Ord (Some f) where
   compare (Some x) (Some y) =
     case hcompareIx x y of
       HLT      -> LT
@@ -141,20 +167,20 @@ instance (HOrdIx f) => Ord (Some f) where
 
 
 
-class (HFunctor f, HFunctor g) => (f :: (* -> *) -> (* -> *)) :<: (g :: (* -> *) -> (* -> *)) where
+class (f :: (* -> *) -> (* -> *)) :<: (g :: (* -> *) -> (* -> *)) where
   inj  :: f h ix -> g h ix
   proj :: g h ix -> Maybe (f h ix)
 
-instance (HFunctor f) => f :<: f where
+instance f :<: f where
   inj  = id
   proj = Just
 
-instance (HFunctor f, HFunctor g) => f :<: (f :+: g) where
+instance {-# OVERLAPS #-} f :<: (f :+: g) where
   inj = Inl
   proj (Inl x) = Just x
   proj _       = Nothing
 
-instance (HFunctor f, HFunctor g, HFunctor h, f :<: g) => f :<: (h :+: g) where
+instance {-# OVERLAPS #-} (f :<: g) => f :<: (h :+: g) where
   inj = Inr . inj
   proj (Inr x) = proj x
   proj _       = Nothing
@@ -169,7 +195,7 @@ class HShow (h :: * -> *) where
   hshowsPrec :: Int -> h ix -> ShowS
   hshowsPrec _ x = \xs -> hshow x ++ xs
 
-instance (HShow (f e), HShow (g e)) => HShow ((:+:) f g e) where
+instance (HShow (f r), HShow (g r)) => HShow ((:+:) f g r) where
   hshowsPrec n (Inl x) = \xs -> showParen (n == 11) (\ys -> "Inl " ++ hshowsPrec 11 x ys) xs
   hshowsPrec n (Inr y) = \xs -> showParen (n == 11) (\ys -> "Inr " ++ hshowsPrec 11 y ys) xs
 

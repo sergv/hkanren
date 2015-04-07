@@ -19,6 +19,7 @@ module Language.HKanren.Core
   , LVar
   , Neq
   , (===)
+  , (===*)
   , (=/=)
   , fresh
   , conj
@@ -37,11 +38,12 @@ import Data.Maybe
 import Data.Monoid
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Type.Equality
 
 import Data.HOrdering
 import Data.HUtils
 
-import Language.HKanren.Subst (Subst, Term, LVar, mkLVar)
+import Language.HKanren.Subst (Subst, Term, Type, TypeRep, LVar, mkLVarType)
 import qualified Language.HKanren.Subst as S
 
 class Unifiable (h :: (* -> *) -> (* -> *)) (g :: (* -> *) -> (* -> *)) where
@@ -53,10 +55,10 @@ instance (Unifiable f g, Unifiable f' g) => Unifiable (f :+: f') g where
   unify _       _       = const Nothing
 
 unifyTerms
-  :: (HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+  :: (HFoldable h, Unifiable h h, HOrdHet (Type h))
   => HFree h (LVar h) ix -> HFree h (LVar h) ix -> Subst h -> Maybe (Subst h)
 unifyTerms (HPure x) y'@(HPure y) s
-  | x ==* y   = Just s
+  | heq x y   = Just s
   | otherwise = Just $ S.extend x y' s
 unifyTerms (HPure x) y s
   | occursCheck x y = Nothing
@@ -67,7 +69,9 @@ unifyTerms x (HPure y) s
 unifyTerms (HFree h) (HFree h') s = unify h h' s
 
 -- | Check whether given logical variable appears inside another term.
-occursCheck :: forall h ix. (HFoldable h, HOrdIx (h HUnit)) => LVar h ix -> HFree h (LVar h) ix -> Bool
+occursCheck
+  :: forall h ix. (HFoldable h, HOrdHet (Type h))
+  => LVar h ix -> HFree h (LVar h) ix -> Bool
 occursCheck var = getAny . go
   where
     go :: HFree h (LVar h) ix' -> Any
@@ -79,7 +83,7 @@ occursCheck var = getAny . go
 -- term in an environment. Sometimes the solution isn't canonical,
 -- so some ugly recursion happens. Happily we don't have to prove
 -- normalization.
-canonize :: forall h ix. (HFunctor h, HOrdIx (h HUnit)) => Subst h -> Term h ix -> Term h ix
+canonize :: forall h ix. (HFunctorId h, HOrdHet (Type h)) => Subst h -> Term h ix -> Term h ix
 canonize subst = go Set.empty
   where
     go :: Set (Some (LVar h)) -> Term h ix' -> Term h ix'
@@ -91,17 +95,8 @@ canonize subst = go Set.empty
             maybe t (go usedVars') $ S.lookup v subst
           where
             usedVars' = Set.insert v' usedVars
-            v' = Some v
-        HFree x -> HFree $ hfmap (go usedVars) x
-
-        -- Atom _   -> t
-        -- Pair l r -> go usedVars l `Pair` go usedVars r
-        -- Var v
-        --   | Set.member v usedVars -> t
-        --   | otherwise             ->
-        --     maybe t (go usedVars') $ S.lookup v subst
-        --   where
-        --     usedVars' = Set.insert v usedVars
+            v'        = Some v
+        HFree x -> HFree $ hfmapId (go usedVars) x
 
 -- | Represents inequalities. @(l, r)@ means that @l@ will not unify
 -- with @r@ within the current environment.
@@ -121,7 +116,7 @@ newtype Predicate h = Predicate { unPred :: State h -> Logic (State h) }
 -- make sure that the solution under which they unify is an
 -- extension of the solution set, ie we must add more facts
 -- to get a contradiction.
-checkNeqs :: forall h. (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit)) => State h -> Logic (State h)
+checkNeqs :: forall h. (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type h)) => State h -> Logic (State h)
 checkNeqs s@State{..} = foldr go (return s) neq
   where
     go :: Some (Neq h) -> Logic (State h) -> Logic (State h)
@@ -134,35 +129,42 @@ checkNeqs s@State{..} = foldr go (return s) neq
 
 -- | Equating two terms will attempt to unify them and backtrack if
 -- this is impossible.
-(===) :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+(===) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type h))
       => Term h ix -> Term h ix -> Predicate h
 (===) l r = Predicate $ \s@State {..} ->
   case unifyTerms (canonize subst l) (canonize subst r) subst of
     Just subst' -> checkNeqs s { subst = subst' }
     Nothing     -> mzero
 
+(===*) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type h), HEqHet (h (Term h)))
+       => Term h ix -> Term h ix' -> Predicate h
+(===*) l r =
+  case heqIx l r of
+    Just Refl -> l === r
+    Nothing   -> Predicate $ \_ -> mzero
+
 -- | The opposite of unification. If any future unification would
 -- cause these two terms to become equal we'll backtrack.
-(=/=) :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+(=/=) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type h))
       => Term h ix -> Term h ix -> Predicate h
 (=/=) l r = Predicate $ \s@State{..} -> checkNeqs s { neq = Some (Neq l r) : neq }
 
 -- | Generate a fresh (not rigid) term to use for our program.
-fresh :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
-      => h f ix -> (Term h ix -> Predicate h) -> Predicate h
-fresh termTemplate withTerm = Predicate $
+fresh :: (TypeRep h, HFoldable h, Unifiable h h)
+      => Type h ix -> (Term h ix -> Predicate h) -> Predicate h
+fresh t withTerm = Predicate $
   \s@(State{freeVarIdx}) ->
-    unPred (withTerm $ HPure $ mkLVar freeVarIdx termTemplate) $ s { freeVarIdx = freeVarIdx + 1 }
+    unPred (withTerm $ HPure $ mkLVarType freeVarIdx t) $ s { freeVarIdx = freeVarIdx + 1 }
 
 -- | Conjunction. This will return solutions that satsify both the
 -- first and second predicate.
-conj :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+conj :: (HFoldable h, Unifiable h h, HOrdHet (h HUnit))
      => Predicate h -> Predicate h -> Predicate h
 conj p1 p2 = Predicate $ \s -> unPred p1 s >>- unPred p2
 
 -- | Disjunction. This will return solutions that satisfy either the
 -- first predicate or the second.
-disconj :: (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
+disconj :: (HFoldable h, Unifiable h h, HOrdHet (h HUnit))
         => Predicate h -> Predicate h -> Predicate h
 disconj p1 p2 = Predicate $ \s -> unPred p1 s `interleave` unPred p2 s
 
@@ -180,12 +182,12 @@ success :: Predicate h
 success = Predicate return
 
 -- | Run a program and find all solutions for the parametrized term.
-run :: forall h f ix. (HFunctor h, HFoldable h, Unifiable h h, HOrdIx (h HUnit))
-    => h f ix -> (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
-run termTemplate mkProg = catMaybes $ map answer $ observeAll prog
+run :: forall h ix. (TypeRep h, HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type h))
+    => Type h ix -> (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
+run t mkProg = catMaybes $ map answer $ observeAll prog
   where
     initVar = 0
-    prog = unPred (fresh termTemplate mkProg) (State S.empty initVar [])
+    prog = unPred (fresh t mkProg) (State S.empty initVar [])
     answer :: State h -> Maybe (Some (Term h), [Some (Neq h)])
     answer State{subst, neq} =
       case S.lookupVar initVar subst of
