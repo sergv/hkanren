@@ -27,7 +27,14 @@
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
+{-# LANGUAGE OverlappingInstances #-}
+
 module Data.HUtils where
+
+import Control.Applicative
+import Data.Foldable (Foldable)
+import Data.Monoid
+import Data.Traversable (Traversable)
 
 import Data.HOrdering
 import Data.Type.Equality

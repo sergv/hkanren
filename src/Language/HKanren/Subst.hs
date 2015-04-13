@@ -19,6 +19,7 @@
 {-# LANGUAGE KindSignatures            #-}
 {-# LANGUAGE InstanceSigs              #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE OverlappingInstances      #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeOperators             #-}
@@ -45,6 +46,7 @@ module Language.HKanren.Subst
   )
 where
 
+import Control.Applicative hiding (empty)
 import Data.HMap (HMap)
 import qualified Data.HMap as HM
 import Data.HOrdering
