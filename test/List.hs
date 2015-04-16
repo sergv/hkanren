@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -13,21 +14,21 @@ import Test.Tasty.QuickCheck hiding ((===))
 import QuickCheckHelper
 
 appendo
-  :: LispType ix
-  -> LispTerm (List ix)
+  :: (SingI ix)
+  => LispTerm (List ix)
   -> LispTerm (List ix)
   -> LispTerm (List ix)
   -> Predicate LispTermF
-appendo typ l r o =
-  conde [ program [ l === inject (Nil typ)
+appendo l r o =
+  conde [ program [ l === inject (Nil sing)
                   , o === r
                   ]
-        , fresh typ $ \h ->
-            fresh (HFix $ iTList typ) $ \t ->
-              fresh (HFix $ iTList typ) $ \o' ->
-                 program [ inject (Cons typ h t)   === l
-                         , appendo typ t r o'
-                         , inject (Cons typ h o')  === o
+        , fresh $ \h ->
+            fresh $ \t ->
+              fresh $ \o' ->
+                 program [ inject (Cons sing h t)   === l
+                         , appendo t r o'
+                         , inject (Cons sing h o')  === o
                          ]
         ]
 
@@ -41,10 +42,17 @@ assertHEqual actual expected =
   where
     msg = "expected: " ++ hshow expected ++ "\n but got: " ++ hshow actual
 
-listTest :: forall ix. String -> Integer -> LispType ix -> (LispTerm ix -> Predicate LispTermF) -> [LispTerm ix] -> TestTree
-listTest testName n typ query expectedAnswers =
+listTest
+  :: forall ix. (SingI ix, HOrdHet Sing)
+  => String
+  -> Integer
+  -> (LispTerm ix
+  -> Predicate LispTermF)
+  -> [LispTerm ix]
+  -> TestTree
+listTest testName n query expectedAnswers =
   testCase testName $
-  case runN n typ query of
+  case runN n query of
     []      -> assertFailure "no results"
     results -> go results expectedAnswers
   where
@@ -54,75 +62,80 @@ listTest testName n typ query expectedAnswers =
     go ((Some t, _):_)  []     = assertFailure $ "more results than answers, next result: " ++ hshow t
     go _                (a:_)  = assertFailure $ "no more results while expecting more answers, e.g.: " ++ hshow a
 
-appendTest :: String -> Integer -> LispType ix -> LispTerm (List ix) -> LispTerm (List ix) -> LispTerm (List ix) -> TestTree
-appendTest testName n typ xs ys zs =
-  listTest testName n (HFix $ inj $ TList $ typ) (\q -> appendo typ xs ys q) [zs]
+appendTest
+  :: (SingI ix, HOrdHet Sing)
+  => String
+  -> Integer
+  -> LispTerm (List ix)
+  -> LispTerm (List ix)
+  -> LispTerm (List ix)
+  -> TestTree
+appendTest testName n xs ys zs =
+  listTest testName n (\q -> appendo xs ys q) [zs]
 
-appendTest' :: String -> LispType ix -> [LispTermF LispTerm ix] -> [LispTermF LispTerm ix] -> [LispTermF LispTerm ix] -> TestTree
-appendTest' testName typ xs ys zs =
-  appendTest testName 1 typ (ilist typ xs) (ilist typ ys) (ilist typ zs)
+appendTest'
+  :: (SingI ix, HOrdHet Sing)
+  => String
+  -> [LispTermF LispTerm ix]
+  -> [LispTermF LispTerm ix]
+  -> [LispTermF LispTerm ix]
+  -> TestTree
+appendTest' testName xs ys zs =
+  appendTest testName 1 (ilist xs) (ilist ys) (ilist zs)
 
-atomType :: LispType Atom
-atomType = HFix $ iTAtom
-
-listOfAtomsType :: LispType (List Atom)
-listOfAtomsType = HFix $ iTList $ atomType
+-- atomType :: LispType Atom
+-- atomType = HFix $ iTAtom
+--
+-- listOfAtomsType :: LispType (List Atom)
+-- listOfAtomsType = HFix $ iTList $ atomType
 
 appendTests :: TestTree
 appendTests = testGroup "append tests"
   [ appendTest'
       "append #1"
-      atomType
       []
       []
       []
   , appendTest'
       "append #2"
-      atomType
       []
       [iAtom "bar"]
       [iAtom "bar"]
   , appendTest'
       "append #3"
-      atomType
       [iAtom "foo"]
       []
       [iAtom "foo"]
   , appendTest'
       "append #4"
-      atomType
       [iAtom "foo"]
       [iAtom "bar"]
       [iAtom "foo", iAtom "bar"]
   , appendTest'
       "append #5"
-      atomType
       [iAtom "foo", iAtom "bar", iAtom "baz"]
       [iAtom "x", iAtom "y", iAtom "z"]
       [iAtom "foo", iAtom "bar", iAtom "baz", iAtom "x", iAtom "y", iAtom "z"]
   , listTest
       "append, infer input"
       1
-      listOfAtomsType
       (\q -> appendo
-               atomType
                q
-               (ilist atomType [])
-               (ilist atomType [iAtom "foo", iAtom "bar"]))
-      [ilist atomType [iAtom "foo", iAtom "bar"]]
+               (ilist [])
+               (ilist [iAtom "foo", iAtom "bar"]))
+      [ilist [iAtom "foo", iAtom "bar"]]
   , appendTest'
       "append 2d lists #1"
-      listOfAtomsType
-      [ list atomType [iAtom "foo"]
-      , list atomType [iAtom "bar", iAtom "baz"]
+      [ list [iAtom "foo"]
+      , list [iAtom "bar", iAtom "baz"]
       ]
-      [ list atomType [iAtom "x", iAtom "y"]
-      , list atomType [iAtom "z"]
+      [ list [iAtom "x", iAtom "y"]
+      , list [iAtom "z"]
       ]
-      [ list atomType [iAtom "foo"]
-      , list atomType [iAtom "bar", iAtom "baz"]
-      , list atomType [iAtom "x", iAtom "y"]
-      , list atomType [iAtom "z"]
+      [ list [iAtom "foo"]
+      , list [iAtom "bar", iAtom "baz"]
+      , list [iAtom "x", iAtom "y"]
+      , list [iAtom "z"]
       ]
   ]
 

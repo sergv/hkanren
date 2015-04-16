@@ -11,14 +11,13 @@
 
 module QuickCheckHelper where
 
-import Control.Applicative
 import Control.Monad
 import Data.HOrdering
 import Data.HUtils
 import Data.Monoid
 import Data.Type.Equality
 import Language.HKanren
-import Test.QuickCheck hiding ((===), Success, Failure)
+-- import Test.QuickCheck hiding ((===), Success, Failure)
 
 data Atom
 
@@ -33,13 +32,18 @@ instance (AtomF :<: h) => Unifiable AtomF h where
     | x == y    = Just s
     | otherwise = Nothing
 
-instance TypeRep AtomF where
-  data TypeOf AtomF e ix where
-    TAtom :: TypeOf AtomF e Atom
-  typeOf (Atom _) = TAtom
+instance SingI Atom where
+  data Sing Atom where
+    TAtom :: Sing Atom
+  sing = TAtom
 
-iTAtom :: (TypeOf AtomF :<: h) => h e Atom
-iTAtom = inj TAtom
+-- instance TypeRep AtomF where
+--   data TypeOf AtomF e ix where
+--     TAtom :: TypeOf AtomF e Atom
+--   typeOf (Atom _) = TAtom
+--
+-- iTAtom :: (TypeOf AtomF :<: h) => h e Atom
+-- iTAtom = inj TAtom
 
 instance HEq (AtomF f) where
   heq (Atom x) (Atom y) = x == y
@@ -66,67 +70,47 @@ instance HShow (AtomF f) where
   hshowsPrec n (Atom str) = \xs -> showParen (n == 11) (\ys -> "Atom " ++ show str ++ ys) xs
 
 
-instance HEq (TypeOf AtomF f) where
-  heq TAtom TAtom = True
-
-instance HEqHet (TypeOf AtomF f) where
-  heqIx TAtom TAtom = Just Refl
-
-instance HOrd (TypeOf AtomF f) where
-  hcompare TAtom TAtom = EQ
-
-instance HOrdHet (TypeOf AtomF f) where
-  hcompareIx TAtom TAtom = HEQ Refl
-
-instance HFunctorId (TypeOf AtomF) where
-  hfmapId _ TAtom = TAtom
-
-instance HFunctor (TypeOf AtomF) where
-  hfmap _ TAtom = TAtom
-
-instance HFoldable (TypeOf AtomF) where
-  hfoldMap _ _ = mempty
-
-instance HShow (TypeOf AtomF f) where
-  hshowsPrec n TAtom = \xs -> "TAtom" ++ xs
-
-
 data List ix
 
-data ListF :: (* -> *) -> (* -> *) where
-  Nil  :: (HOrdHet (Type (FunctorOf r))) => Type (FunctorOf r) ix -> ListF r (List ix)
-  Cons :: (HOrdHet (Type (FunctorOf r))) => Type (FunctorOf r) ix -> r ix -> r (List ix) -> ListF r (List ix)
+instance (SingI ix) => SingI (List ix) where
+  data Sing (List ix) where
+    TList :: Sing ix -> Sing (List ix)
+  sing = TList sing
 
-instance (HFoldable h, HOrdHet (Type h), Unifiable h h) => Unifiable ListF h where
+data ListF :: (* -> *) -> (* -> *) where
+  Nil  :: Sing ix -> ListF r (List ix)
+  Cons :: Sing ix -> r ix -> r (List ix) -> ListF r (List ix)
+
+instance (HFoldable h, HOrdHet Sing, Unifiable h h) => Unifiable ListF h where
   unify (Nil _)       (Nil _)       = return
   unify (Cons _ x xs) (Cons _ y ys) =
     unifyTerms x y >=> unifyTerms xs ys
   unify _ _ = const Nothing
 
-instance TypeRep ListF where
-  data TypeOf ListF r ix where
-    TList :: r ix -> TypeOf ListF r (List ix)
-  typeOf (Nil t)      = TList t
-  typeOf (Cons t _ _) = TList t
+-- instance TypeRep ListF where
+--   data TypeOf ListF r ix where
+--     TList :: r ix -> TypeOf ListF r (List ix)
+--   typeOf (Nil t)      = TList t
+--   typeOf (Cons t _ _) = TList t
 
-iTList :: (TypeOf ListF :<: h) => r ix -> h r (List ix)
-iTList = inj . TList
+-- iTList :: (TypeOf ListF :<: h) => r ix -> h r (List ix)
+-- iTList = inj . TList
 
 instance (HEq f) => HEq (ListF f) where
   heq (Nil _)       (Nil _)       = True
   heq (Cons _ x xs) (Cons _ y ys) = heq x y && heq xs ys
   heq _             _             = False
 
-instance (HEqHet f) => HEqHet (ListF f) where
+instance (HEqHet f, HEqHet Sing) => HEqHet (ListF f) where
   heqIx (Nil t)       (Nil t')       =
     case heqIx t t' of
       Just Refl -> Just Refl
       Nothing   -> Nothing
-  heqIx (Nil t)       (Cons t' y _)  =
+  heqIx (Nil t)       (Cons t' _ _)  =
     case heqIx t t' of
       Just Refl -> Just Refl
       Nothing   -> Nothing
-  heqIx (Cons t x _)  (Nil t')       =
+  heqIx (Cons t _ _)  (Nil t')       =
     case heqIx t t' of
       Just Refl -> Just Refl
       Nothing   -> Nothing
@@ -141,7 +125,7 @@ instance (HOrd f) => HOrd (ListF f) where
   hcompare (Cons _ _ _)  (Nil _)       = GT
   hcompare (Cons _ x xs) (Cons _ y ys) = hcompare x y <> hcompare xs ys
 
-instance (HOrdHet f) => HOrdHet (ListF f) where
+instance (HOrdHet f, HOrdHet Sing) => HOrdHet (ListF f) where
   hcompareIx (Nil t)      (Nil t')      =
     case hcompareIx t t' of
       HLT      -> HLT
@@ -176,52 +160,20 @@ instance HFoldable ListF where
   hfoldMap f (Cons _ x xs) = f x <> f xs
 
 instance (HShow f) => HShow (ListF f) where
-  hshowsPrec n (Nil _)       = \xs -> "Nil" ++ xs
+  hshowsPrec _ (Nil _)       = \xs -> "Nil" ++ xs
   hshowsPrec n (Cons _ x xs) =
     \ys -> showParen (n == 11) (\zs -> "Cons " ++ hshowsPrec 11 x (showChar ' ' $ hshowsPrec 11 xs zs)) ys
 
 
-instance (HEq f) => HEq (TypeOf ListF f) where
-  heq (TList x) (TList y) = heq x y
-
-instance (HEqHet f) => HEqHet (TypeOf ListF f) where
-  heqIx (TList x) (TList y) =
-    case heqIx x y of
-      Just Refl -> Just Refl
-      Nothing   -> Nothing
-
-instance (HOrd f) => HOrd (TypeOf ListF f) where
-  hcompare (TList x) (TList y) = hcompare x y
-
-instance (HOrdHet f) => HOrdHet (TypeOf ListF f) where
-  hcompareIx (TList x) (TList y) =
-    case hcompareIx x y of
-      HLT      -> HLT
-      HEQ Refl -> HEQ Refl
-      HGT      -> HGT
-
-instance HFunctorId (TypeOf ListF) where
-  hfmapId f (TList x) = TList $ f x
-
-instance HFunctor (TypeOf ListF) where
-  hfmap f (TList x) = TList $ f x
-
-instance HFoldable (TypeOf ListF) where
-  hfoldMap f (TList x) = f x
-
-instance (HShow f) => HShow (TypeOf ListF f) where
-  hshowsPrec n (TList x) = \xs -> "TList " ++ hshowsPrec 11 x xs
-
-
 type LispTermF = ListF :+: AtomF
 type LispTerm = Term LispTermF
-type LispType = Type LispTermF
+-- type LispType = Type LispTermF
 
-list :: LispType ix -> [LispTermF LispTerm ix] -> LispTermF LispTerm (List ix)
-list t = foldr (\x y -> inj $ Cons t (HFree x) (HFree y)) (inj $ Nil t)
+list :: (SingI ix) => [LispTermF LispTerm ix] -> LispTermF LispTerm (List ix)
+list = foldr (\x y -> inj $ Cons sing (HFree x) (HFree y)) (inj $ Nil sing)
 
-ilist :: LispType ix -> [LispTermF LispTerm ix] -> LispTerm (List ix)
-ilist t = HFree . list t
+ilist :: (SingI ix) => [LispTermF LispTerm ix] -> LispTerm (List ix)
+ilist = HFree . list
 
 
 -- data Pair ix ix'
