@@ -60,66 +60,68 @@ import Prelude hiding (lookup)
 
 type ClosedTerm h = HFix h
 -- type Type t = ClosedTerm (TypeOf t)
-type Term h = HFree h (LVar (ClosedTerm h))
+type Term h = HFree h (LVar h)
 
 
-class SingI (a :: * -> *) (ix :: *) where
+class SingI (a :: k) (ix :: *) where
   data Sing a :: * -> *
   sing :: Sing a ix
 
-class SingOpt (a :: * -> *) (ix :: *) where
+class SingOpt (a :: k) (ix :: *) where
   singOpt :: Maybe (Sing a ix)
 
-instance (SingI (f (HFix f ix)) ix) => SingI (HFix f ix) ix where
-  data Sing (HFix f ix) ix where
-    THFix :: Sing f ix -> Sing (HFix f ix) ix
+instance (SingI f ix) => SingI (HFix f) ix where
+  data Sing (HFix f) ix where
+    THFix :: Sing f ix -> Sing (HFix f) ix
   sing = THFix sing
 
-instance (SingI (f (HFix f ix)) ix) => SingI (HFree f a ix) ix where
-  data Sing (HFree f a ix) ix where
-    THFree :: Sing f ix -> Sing (HFree f a ix) ix
+instance (SingI f ix) => SingI (HFree f a) ix where
+  data Sing (HFree f a) ix where
+    -- THPure :: Sing a ix -> Sing (HFree f a) ix
+    THFree :: Sing f ix -> Sing (HFree f a) ix
   sing = THFree sing
 
-instance (SingOpt f ix, SingI g ix) => SingI ((:+:) f g r) ix where
-  data Sing ((:+:) f g r) ix where
-    TInl :: Sing f ix -> Sing ((:+:) f g r) ix
-    TInr :: Sing g ix -> Sing ((:+:) f g r) ix
+instance (SingOpt f ix, SingI g ix) => SingI ((:+:) f g) ix where
+  data Sing ((:+:) f g) ix where
+    TInl :: Sing f ix -> Sing ((:+:) f g) ix
+    TInr :: Sing g ix -> Sing ((:+:) f g) ix
   sing =
     case singOpt :: Maybe (Sing f ix) of
       Just x  -> TInl x
       Nothing -> TInr sing
 
-instance (SingOpt f ix, SingI g ix) => SingOpt ((:+:) f g r) ix where
+instance (SingOpt f ix, SingI g ix) => SingOpt ((:+:) f g) ix where
   singOpt =
     case singOpt :: Maybe (Sing f ix) of
       Just x  -> Just $ TInl x
       Nothing -> Just $ TInr sing
 
--- singOf :: (SingI h ix) => p ix -> Sing h ix
--- singOf _ = sing
+instance (HEq (Sing f), HEq (Sing g)) => HEq (Sing ((:+:) f g)) where
+  heq (TInl x) (TInl x') = heq x x'
+  heq (TInr y) (TInr y') = heq y y'
+  heq _        _         = False
 
--- cannot define these
--- instance HEq Sing where
---   heq a b = _
---
--- instance HEqHet Sing where
---
--- instance HOrd Sing where
---
--- instance HOrdHet Sing where
+instance (HEqHet (Sing f), HEqHet (Sing g)) => HEqHet (Sing ((:+:) f g)) where
+  heqIx (TInl x) (TInl x') = heqIx x x'
+  heqIx (TInr y) (TInr y') = heqIx y y'
+  heqIx _        _         = Nothing
 
--- instance (SingI (f :: (* -> *) -> (* -> *)), SingI (g :: (* -> *) -> (* -> *))) => SingI (f :+: g) where
---   data Sing (f :+: g) where
---     TInl :: Sing f -> Sing (f :+: g)
---     TInr :: Sing g -> Sing (f :+: g)
---   sing = foo
+instance (HOrd (Sing f), HOrd (Sing g)) => HOrd (Sing ((:+:) f g)) where
+  hcompare (TInl x) (TInl x') = hcompare x x'
+  hcompare (TInl _) (TInr _)  = LT
+  hcompare (TInr y) (TInr y') = hcompare y y'
+  hcompare (TInr _) (TInl _)  = GT
 
+instance (HOrdHet (Sing f), HOrdHet (Sing g)) => HOrdHet (Sing ((:+:) f g)) where
+  hcompareIx (TInl x) (TInl x') = hcompareIx x x'
+  hcompareIx (TInl _) (TInr _)  = HLT
+  hcompareIx (TInr y) (TInr y') = hcompareIx y y'
+  hcompareIx (TInr _) (TInl _)  = HGT
 
 -- | Logic variable.
-data LVar (f :: * -> *) ix where
+data LVar (f :: (* -> *) -> (* -> *)) ix where
   LVar :: Integer -> Sing f ix -> LVar f ix
   -- deriving (Show, Eq, Ord)
-
 
 instance HEq (LVar h) where
   -- heq :: (Eq (Sing ix)) => LVar h ix -> LVar h ix -> Bool
@@ -153,7 +155,7 @@ mkLVar n = LVar n sing
 -- mkLVarType :: (TypeRep h) => Integer -> Type h ix -> LVar h ix
 -- mkLVarType n t = LVar n t
 
-newtype Subst h = Subst (HMap (LVar (ClosedTerm h)) (Term h))
+newtype Subst h = Subst (HMap (LVar h) (Term h))
 
 lookup :: (HEqHet (Sing h), HOrdHet (Sing h)) => LVar h ix -> Subst h -> Maybe (Term h ix)
 lookup k (Subst s) = HM.lookup k s

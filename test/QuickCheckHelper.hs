@@ -32,25 +32,6 @@ instance (AtomF :<: h) => Unifiable AtomF h where
     | x == y    = Just s
     | otherwise = Nothing
 
-instance SingI (AtomF h) Atom where
-  data Sing (AtomF h) Atom where
-    TAtom :: Sing (AtomF h) Atom
-  sing = TAtom
-
-instance SingOpt AtomF Atom where
-  singOpt = Just sing
-
-instance SingOpt AtomF ix where
-  singOpt = Nothing
-
--- instance TypeRep AtomF where
---   data TypeOf AtomF e ix where
---     TAtom :: TypeOf AtomF e Atom
---   typeOf (Atom _) = TAtom
---
--- iTAtom :: (TypeOf AtomF :<: h) => h e Atom
--- iTAtom = inj TAtom
-
 instance HEq (AtomF f) where
   heq (Atom x) (Atom y) = x == y
 
@@ -62,6 +43,7 @@ instance HOrd (AtomF f) where
 
 instance HOrdHet (AtomF f) where
   hcompareIx (Atom _) (Atom _) = HEQ Refl
+
 
 instance HFunctorId AtomF where
   hfmapId _ (Atom n) = Atom n
@@ -76,12 +58,63 @@ instance HShow (AtomF f) where
   hshowsPrec n (Atom str) = \xs -> showParen (n == 11) (\ys -> "Atom " ++ show str ++ ys) xs
 
 
+instance SingI AtomF Atom where
+  data Sing AtomF ix where
+    TAtom :: Sing AtomF Atom
+  sing = TAtom
+
+instance SingOpt AtomF Atom where
+  singOpt = Just sing
+
+instance SingOpt AtomF ix where
+  singOpt = Nothing
+
+instance HEq (Sing AtomF) where
+  heq TAtom TAtom = True
+
+instance HEqHet (Sing AtomF) where
+  heqIx TAtom TAtom = Just Refl
+
+instance HOrd (Sing AtomF) where
+  hcompare TAtom TAtom = EQ
+
+instance HOrdHet (Sing AtomF) where
+  hcompareIx TAtom TAtom = HEQ Refl
+
+
 data List ix
 
 instance (SingI h ix) => SingI (ListF h) (List ix) where
-  data Sing (ListF h) (List ix) where
+  data Sing (ListF h) ix where
     TList :: Sing h ix -> Sing (ListF h) (List ix)
   sing = TList sing
+
+-- instance (SingOpt h ix) => SingOpt ListF (List ix) where
+--   singOpt = Just sing
+
+-- instance SingOpt ListF ix where
+--   singOpt = Nothing
+
+instance (HEq (Sing h)) => HEq (Sing (ListF h)) where
+  heq (TList x) (TList y) = heq x y
+
+instance (HEqHet (Sing h)) => HEqHet (Sing (ListF h)) where
+  heqIx (TList x) (TList y) =
+    case heqIx x y of
+      Just Refl -> Just Refl
+      Nothing   -> Nothing
+
+instance (HOrd (Sing h)) => HOrd (Sing (ListF h)) where
+  hcompare (TList x) (TList y) = hcompare x y
+
+instance (HOrdHet (Sing h)) => HOrdHet (Sing (ListF h)) where
+  hcompareIx (TList x) (TList y) =
+    case hcompareIx x y of
+      HLT      -> HLT
+      HEQ Refl -> HEQ Refl
+      HGT      -> HGT
+
+
 
 data ListF :: (* -> *) -> (* -> *) where
   Nil  :: Sing r ix -> ListF r (List ix)
