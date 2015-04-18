@@ -29,9 +29,9 @@
 module Language.HKanren.SingletonsPlayground where
 
 import Data.Singletons
-import Data.Singletons.Bool
+import Data.Singletons.Prelude.Bool
 import Data.Singletons.Decide
-import Data.Singletons.Eq
+import Data.Singletons.Prelude.Eq
 import Data.Singletons.TH
 -- import Data.Type.Equality
 
@@ -95,4 +95,5 @@ bar = SComplex SSimple $ SComplex SSimple SSimple
 
 main :: IO ()
 main = do
-  print $ sEqIx foo bar
+  -- print $ sEqIx foo bar
+  return ()

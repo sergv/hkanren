@@ -13,6 +13,7 @@
 
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE PolyKinds      #-}
 {-# LANGUAGE TypeOperators  #-}
 
 module Data.HOrdering where

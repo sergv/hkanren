@@ -27,7 +27,7 @@ library
   build-depends:       base >=4 && <5
                      , containers >=0.4
                      , logict
-                     , singletons ==0.9.3
+                     , singletons
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -W -Wall
@@ -47,16 +47,16 @@ library
 --                      -ferror-spans -rtsopts
 --                      -main-is Language.HKanren.Playground
 
--- executable           singletons-playground
---   build-depends:     base >= 4.7, containers, singletons ==0.9.3
---   main-is:           src/Language/HKanren/SingletonsPlayground.hs
---   default-language:  Haskell2010
---   ghc-options:       -W -Wall
---                      -fwarn-monomorphism-restriction
---                      -fno-warn-type-defaults
---                      -fno-warn-name-shadowing
---                      -ferror-spans -rtsopts
---                      -main-is Language.HKanren.Playground
+executable           singletons-playground
+  build-depends:     base >= 4.7, containers, singletons
+  main-is:           src/Language/HKanren/SingletonsPlayground.hs
+  default-language:  Haskell2010
+  ghc-options:       -W -Wall
+                     -fwarn-monomorphism-restriction
+                     -fno-warn-type-defaults
+                     -fno-warn-name-shadowing
+                     -ferror-spans -rtsopts
+                     -main-is Language.HKanren.SingletonsPlayground
 
 -- test-suite test-unify
 --   hs-source-dirs: test

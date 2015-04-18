@@ -54,7 +54,10 @@ import Data.HOrdering
 import Data.HUtils
 import Data.Monoid
 import Data.Singletons
-import Data.Singletons.List
+import Data.Singletons.Prelude.List
+import Data.Singletons.Prelude
+import Data.Singletons.TH
+import Data.Singletons.TypeLits
 import Data.Type.Equality
 
 import Prelude hiding (lookup)
