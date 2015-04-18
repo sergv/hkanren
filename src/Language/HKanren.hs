@@ -55,6 +55,9 @@ module Language.HKanren
   , Subst
   , SingI(..)
   , SingOpt(..)
+  , If
+  , Or
+  , Equal
   )
 where
 

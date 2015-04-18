@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds                 #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE EmptyDataDecls            #-}
@@ -5,12 +6,14 @@
 {-# LANGUAGE GADTs                     #-}
 {-# LANGUAGE KindSignatures            #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE PolyKinds                 #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeOperators             #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
 module QuickCheckHelper where
 
+import Control.Applicative
 import Control.Monad
 import Data.HOrdering
 import Data.HUtils
@@ -20,6 +23,31 @@ import Language.HKanren
 -- import Test.QuickCheck hiding ((===), Success, Failure)
 
 data Atom
+
+instance (ix ~ Atom) => SingI (AtomF h) ix where
+  type SupportsIx (AtomF h) ix = Equal ix Atom
+  data Sing (AtomF h) idx where
+    TAtom :: Sing (AtomF h) Atom
+  sing = TAtom
+
+instance SingOpt (AtomF h) Atom where
+  singOpt = Just sing
+
+instance SingOpt (AtomF h) ix where
+  singOpt = Nothing
+
+instance HEq (Sing (AtomF h)) where
+  heq TAtom TAtom = True
+
+instance HEqHet (Sing (AtomF h)) where
+  heqIx TAtom TAtom = Just Refl
+
+instance HOrd (Sing (AtomF h)) where
+  hcompare TAtom TAtom = EQ
+
+instance HOrdHet (Sing (AtomF h)) where
+  hcompareIx TAtom TAtom = HEQ Refl
+
 
 data AtomF :: (* -> *) -> (* -> *) where
   Atom :: String -> AtomF r Atom
@@ -58,42 +86,23 @@ instance HShow (AtomF f) where
   hshowsPrec n (Atom str) = \xs -> showParen (n == 11) (\ys -> "Atom " ++ show str ++ ys) xs
 
 
-instance SingI AtomF Atom where
-  data Sing AtomF ix where
-    TAtom :: Sing AtomF Atom
-  sing = TAtom
-
-instance SingOpt AtomF Atom where
-  singOpt = Just sing
-
-instance SingOpt AtomF ix where
-  singOpt = Nothing
-
-instance HEq (Sing AtomF) where
-  heq TAtom TAtom = True
-
-instance HEqHet (Sing AtomF) where
-  heqIx TAtom TAtom = Just Refl
-
-instance HOrd (Sing AtomF) where
-  hcompare TAtom TAtom = EQ
-
-instance HOrdHet (Sing AtomF) where
-  hcompareIx TAtom TAtom = HEQ Refl
-
-
 data List ix
 
-instance (SingI h ix) => SingI (ListF h) (List ix) where
-  data Sing (ListF h) ix where
-    TList :: Sing h ix -> Sing (ListF h) (List ix)
+type family IsList (ix :: k) :: Bool where
+  IsList (List ix) = 'True
+  IsList b         = 'False
+
+instance (SingI h ix', List ix' ~ ix) => SingI (ListF h) ix where
+  type SupportsIx (ListF h) ix = IsList ix
+  data Sing (ListF h) idx where
+    TList :: Sing h ix' -> Sing (ListF h) (List ix')
   sing = TList sing
 
--- instance (SingOpt h ix) => SingOpt ListF (List ix) where
---   singOpt = Just sing
+instance (SingOpt h ix) => SingOpt (ListF h) (List ix) where
+  singOpt = TList <$> singOpt
 
--- instance SingOpt ListF ix where
---   singOpt = Nothing
+instance SingOpt ListF ix where
+  singOpt = Nothing
 
 instance (HEq (Sing h)) => HEq (Sing (ListF h)) where
   heq (TList x) (TList y) = heq x y
@@ -120,7 +129,7 @@ data ListF :: (* -> *) -> (* -> *) where
   Nil  :: Sing r ix -> ListF r (List ix)
   Cons :: Sing r ix -> r ix -> r (List ix) -> ListF r (List ix)
 
-instance (HFoldable h, HOrdHet (Sing h), Unifiable h h) => Unifiable ListF h where
+instance (HFoldable h, HOrdHet (Sing (h (Term h))), Unifiable h h) => Unifiable ListF h where
   unify (Nil _)       (Nil _)       = return
   unify (Cons _ x xs) (Cons _ y ys) =
     unifyTerms x y >=> unifyTerms xs ys
@@ -204,14 +213,14 @@ instance (HShow f) => HShow (ListF f) where
     \ys -> showParen (n == 11) (\zs -> "Cons " ++ hshowsPrec 11 x (showChar ' ' $ hshowsPrec 11 xs zs)) ys
 
 
-type LispTermF = ListF :+: AtomF
+type LispTermF = AtomF :+: ListF
 type LispTerm = Term LispTermF
 -- type LispType = Type LispTermF
 
-list :: (SingI LispTermF ix) => [LispTermF LispTerm ix] -> LispTermF LispTerm (List ix)
+list :: (SingI (LispTermF LispTerm) ix) => [LispTermF LispTerm ix] -> LispTermF LispTerm (List ix)
 list = foldr (\x y -> inj $ Cons sing (HFree x) (HFree y)) (inj $ Nil sing)
 
-ilist :: (SingI LispTermF ix) => [LispTermF LispTerm ix] -> LispTerm (List ix)
+ilist :: (SingI (LispTermF LispTerm) ix) => [LispTermF LispTerm ix] -> LispTerm (List ix)
 ilist = HFree . list
 
 

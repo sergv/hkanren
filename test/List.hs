@@ -14,8 +14,8 @@ import Test.Tasty.QuickCheck hiding ((===))
 import QuickCheckHelper
 
 appendo
-  :: (SingI LispTermF ix)
-  => LispTerm (List ix)
+  :: (SingI (LispTermF LispTerm) ix) =>
+     LispTerm (List ix)
   -> LispTerm (List ix)
   -> LispTerm (List ix)
   -> Predicate LispTermF
@@ -43,7 +43,7 @@ assertHEqual actual expected =
     msg = "expected: " ++ hshow expected ++ "\n but got: " ++ hshow actual
 
 listTest
-  :: forall ix. (SingI LispTermF ix)
+  :: forall ix. (SingI (LispTermF LispTerm) ix)
   => String
   -> Integer
   -> (LispTerm ix
@@ -63,7 +63,7 @@ listTest testName n query expectedAnswers =
     go _                (a:_)  = assertFailure $ "no more results while expecting more answers, e.g.: " ++ hshow a
 
 appendTest
-  :: (SingI LispTermF ix)
+  :: (SingI (LispTermF LispTerm) ix)
   => String
   -> Integer
   -> LispTerm (List ix)
@@ -74,7 +74,7 @@ appendTest testName n xs ys zs =
   listTest testName n (\q -> appendo xs ys q) [zs]
 
 appendTest'
-  :: (SingI LispTermF ix)
+  :: (SingI (LispTermF LispTerm) ix)
   => String
   -> [LispTermF LispTerm ix]
   -> [LispTermF LispTerm ix]

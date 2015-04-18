@@ -25,7 +25,7 @@ program = foldr conj success
 
 -- | Only grab n solutions. Useful for when the full logic program
 -- might not terminate. Or takes its sweet time to do so.
-runN :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, SingI h ix, HOrdHet (Sing h))
+runN :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, SingI (h (Term h)) ix, HOrdHet (Sing (h (Term h))))
      => Integer -> (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
 runN n = genericTake n . run
 
