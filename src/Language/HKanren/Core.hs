@@ -43,7 +43,7 @@ import Data.Type.Equality
 import Data.HOrdering
 import Data.HUtils
 
-import Language.HKanren.Subst (Subst, Term, SingI(..), LVar, mkLVar)
+import Language.HKanren.Subst (Subst, Term, TypeI(..), LVar, mkLVar)
 import qualified Language.HKanren.Subst as S
 
 class Unifiable (h :: (* -> *) -> (* -> *)) (g :: (* -> *) -> (* -> *)) where
@@ -55,7 +55,7 @@ instance (Unifiable f g, Unifiable f' g) => Unifiable (f :+: f') g where
   unify _       _       = const Nothing
 
 unifyTerms
-  :: (HFoldable h, Unifiable h h, HOrdHet (Sing (h (Term h))))
+  :: (HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h))))
   => HFree h (LVar h) ix -> HFree h (LVar h) ix -> Subst h -> Maybe (Subst h)
 unifyTerms (HPure x) y'@(HPure y) s
   | heq x y   = Just s
@@ -70,7 +70,7 @@ unifyTerms (HFree h) (HFree h') s = unify h h' s
 
 -- | Check whether given logical variable appears inside another term.
 occursCheck
-  :: forall h ix. (HFoldable h, HOrdHet (Sing (h (Term h))))
+  :: forall h ix. (HFoldable h, HOrdHet (Type (h (Term h))))
   => LVar h ix -> HFree h (LVar h) ix -> Bool
 occursCheck var = getAny . go
   where
@@ -83,7 +83,7 @@ occursCheck var = getAny . go
 -- term in an environment. Sometimes the solution isn't canonical,
 -- so some ugly recursion happens. Happily we don't have to prove
 -- normalization.
-canonize :: forall h ix. (HFunctorId h, HOrdHet (Sing (h (Term h)))) => Subst h -> Term h ix -> Term h ix
+canonize :: forall h ix. (HFunctorId h, HOrdHet (Type (h (Term h)))) => Subst h -> Term h ix -> Term h ix
 canonize subst = go Set.empty
   where
     go :: Set (Some (LVar h)) -> Term h ix' -> Term h ix'
@@ -116,7 +116,7 @@ newtype Predicate h = Predicate { unPred :: State h -> Logic (State h) }
 -- make sure that the solution under which they unify is an
 -- extension of the solution set, ie we must add more facts
 -- to get a contradiction.
-checkNeqs :: forall h. (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Sing (h (Term h)))) => State h -> Logic (State h)
+checkNeqs :: forall h. (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h)))) => State h -> Logic (State h)
 checkNeqs s@State{..} = foldr go (return s) neq
   where
     go :: Some (Neq h) -> Logic (State h) -> Logic (State h)
@@ -129,14 +129,14 @@ checkNeqs s@State{..} = foldr go (return s) neq
 
 -- | Equating two terms will attempt to unify them and backtrack if
 -- this is impossible.
-(===) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Sing (h (Term h))))
+(===) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h))))
       => Term h ix -> Term h ix -> Predicate h
 (===) l r = Predicate $ \s@State {..} ->
   case unifyTerms (canonize subst l) (canonize subst r) subst of
     Just subst' -> checkNeqs s { subst = subst' }
     Nothing     -> mzero
 
-(===*) :: (HFunctorId h, HFoldable h, Unifiable h h, HEqHet (h (Term h)), HOrdHet (Sing (h (Term h))))
+(===*) :: (HFunctorId h, HFoldable h, Unifiable h h, HEqHet (h (Term h)), HOrdHet (Type (h (Term h))))
        => Term h ix -> Term h ix' -> Predicate h
 (===*) l r =
   case heqIx l r of
@@ -145,12 +145,12 @@ checkNeqs s@State{..} = foldr go (return s) neq
 
 -- | The opposite of unification. If any future unification would
 -- cause these two terms to become equal we'll backtrack.
-(=/=) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Sing (h (Term h))))
+(=/=) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h))))
       => Term h ix -> Term h ix -> Predicate h
 (=/=) l r = Predicate $ \s@State{..} -> checkNeqs s { neq = Some (Neq l r) : neq }
 
 -- | Generate a fresh (not rigid) term to use for our program.
-fresh :: (HFoldable h, Unifiable h h, SingI (h (Term h)) ix)
+fresh :: (HFoldable h, Unifiable h h, TypeI (h (Term h)) ix)
       => (Term h ix -> Predicate h) -> Predicate h
 fresh withTerm = Predicate $
   \s@(State{freeVarIdx}) ->
@@ -182,7 +182,7 @@ success :: Predicate h
 success = Predicate return
 
 -- | Run a program and find all solutions for the parametrized term.
-run :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, SingI (h (Term h)) ix, HOrdHet (Sing (h (Term h))))
+run :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, TypeI (h (Term h)) ix, HOrdHet (Type (h (Term h))))
     => (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
 run mkProg = catMaybes $ map answer $ observeAll prog
   where

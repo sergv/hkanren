@@ -53,8 +53,8 @@ module Language.HKanren
   , module Language.HKanren.Syntax
   , mkLVar
   , Subst
-  , SingI(..)
-  , SingOpt(..)
+  , TypeI(..)
+  , TypeOpt(..)
   , If
   , Or
   , Equal

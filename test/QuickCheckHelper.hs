@@ -24,28 +24,28 @@ import Language.HKanren
 
 data Atom
 
-instance (ix ~ Atom) => SingI (AtomF h) ix where
+instance (ix ~ Atom) => TypeI (AtomF h) ix where
   type SupportsIx (AtomF h) ix = Equal ix Atom
-  data Sing (AtomF h) idx where
-    TAtom :: Sing (AtomF h) Atom
-  sing = TAtom
+  data Type (AtomF h) idx where
+    TAtom :: Type (AtomF h) Atom
+  singType = TAtom
 
-instance SingOpt (AtomF h) Atom where
-  singOpt = Just sing
+instance TypeOpt (AtomF h) Atom where
+  singTypeOpt = Just singType
 
-instance SingOpt (AtomF h) ix where
-  singOpt = Nothing
+instance TypeOpt (AtomF h) ix where
+  singTypeOpt = Nothing
 
-instance HEq (Sing (AtomF h)) where
+instance HEq (Type (AtomF h)) where
   heq TAtom TAtom = True
 
-instance HEqHet (Sing (AtomF h)) where
+instance HEqHet (Type (AtomF h)) where
   heqIx TAtom TAtom = Just Refl
 
-instance HOrd (Sing (AtomF h)) where
+instance HOrd (Type (AtomF h)) where
   hcompare TAtom TAtom = EQ
 
-instance HOrdHet (Sing (AtomF h)) where
+instance HOrdHet (Type (AtomF h)) where
   hcompareIx TAtom TAtom = HEQ Refl
 
 
@@ -92,31 +92,31 @@ type family IsList (ix :: k) :: Bool where
   IsList (List ix) = 'True
   IsList b         = 'False
 
-instance (SingI h ix', List ix' ~ ix) => SingI (ListF h) ix where
+instance (TypeI h ix', List ix' ~ ix) => TypeI (ListF h) ix where
   type SupportsIx (ListF h) ix = IsList ix
-  data Sing (ListF h) idx where
-    TList :: Sing h ix' -> Sing (ListF h) (List ix')
-  sing = TList sing
+  data Type (ListF h) idx where
+    TList :: Type h ix' -> Type (ListF h) (List ix')
+  singType = TList singType
 
-instance (SingOpt h ix) => SingOpt (ListF h) (List ix) where
-  singOpt = TList <$> singOpt
+instance (TypeOpt h ix) => TypeOpt (ListF h) (List ix) where
+  singTypeOpt = TList <$> singTypeOpt
 
-instance SingOpt ListF ix where
-  singOpt = Nothing
+instance TypeOpt ListF ix where
+  singTypeOpt = Nothing
 
-instance (HEq (Sing h)) => HEq (Sing (ListF h)) where
+instance (HEq (Type h)) => HEq (Type (ListF h)) where
   heq (TList x) (TList y) = heq x y
 
-instance (HEqHet (Sing h)) => HEqHet (Sing (ListF h)) where
+instance (HEqHet (Type h)) => HEqHet (Type (ListF h)) where
   heqIx (TList x) (TList y) =
     case heqIx x y of
       Just Refl -> Just Refl
       Nothing   -> Nothing
 
-instance (HOrd (Sing h)) => HOrd (Sing (ListF h)) where
+instance (HOrd (Type h)) => HOrd (Type (ListF h)) where
   hcompare (TList x) (TList y) = hcompare x y
 
-instance (HOrdHet (Sing h)) => HOrdHet (Sing (ListF h)) where
+instance (HOrdHet (Type h)) => HOrdHet (Type (ListF h)) where
   hcompareIx (TList x) (TList y) =
     case hcompareIx x y of
       HLT      -> HLT
@@ -126,10 +126,10 @@ instance (HOrdHet (Sing h)) => HOrdHet (Sing (ListF h)) where
 
 
 data ListF :: (* -> *) -> (* -> *) where
-  Nil  :: Sing r ix -> ListF r (List ix)
-  Cons :: Sing r ix -> r ix -> r (List ix) -> ListF r (List ix)
+  Nil  :: Type r ix -> ListF r (List ix)
+  Cons :: Type r ix -> r ix -> r (List ix) -> ListF r (List ix)
 
-instance (HFoldable h, HOrdHet (Sing (h (Term h))), Unifiable h h) => Unifiable ListF h where
+instance (HFoldable h, HOrdHet (Type (h (Term h))), Unifiable h h) => Unifiable ListF h where
   unify (Nil _)       (Nil _)       = return
   unify (Cons _ x xs) (Cons _ y ys) =
     unifyTerms x y >=> unifyTerms xs ys
@@ -149,7 +149,7 @@ instance (HEq f) => HEq (ListF f) where
   heq (Cons _ x xs) (Cons _ y ys) = heq x y && heq xs ys
   heq _             _             = False
 
-instance (HEqHet f, HEqHet (Sing f)) => HEqHet (ListF f) where
+instance (HEqHet f, HEqHet (Type f)) => HEqHet (ListF f) where
   heqIx (Nil t)       (Nil t')       =
     case heqIx t t' of
       Just Refl -> Just Refl
@@ -173,7 +173,7 @@ instance (HOrd f) => HOrd (ListF f) where
   hcompare (Cons _ _ _)  (Nil _)       = GT
   hcompare (Cons _ x xs) (Cons _ y ys) = hcompare x y <> hcompare xs ys
 
-instance (HOrdHet f, HOrdHet (Sing f)) => HOrdHet (ListF f) where
+instance (HOrdHet f, HOrdHet (Type f)) => HOrdHet (ListF f) where
   hcompareIx (Nil t)      (Nil t')      =
     case hcompareIx t t' of
       HLT      -> HLT
@@ -217,10 +217,10 @@ type LispTermF = AtomF :+: ListF
 type LispTerm = Term LispTermF
 -- type LispType = Type LispTermF
 
-list :: (SingI (LispTermF LispTerm) ix) => [LispTermF LispTerm ix] -> LispTermF LispTerm (List ix)
-list = foldr (\x y -> inj $ Cons sing (HFree x) (HFree y)) (inj $ Nil sing)
+list :: (TypeI (LispTermF LispTerm) ix) => [LispTermF LispTerm ix] -> LispTermF LispTerm (List ix)
+list = foldr (\x y -> inj $ Cons singType (HFree x) (HFree y)) (inj $ Nil singType)
 
-ilist :: (SingI (LispTermF LispTerm) ix) => [LispTermF LispTerm ix] -> LispTerm (List ix)
+ilist :: (TypeI (LispTermF LispTerm) ix) => [LispTermF LispTerm ix] -> LispTerm (List ix)
 ilist = HFree . list
 
 

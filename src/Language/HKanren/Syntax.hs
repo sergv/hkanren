@@ -9,7 +9,7 @@ import Data.HOrdering
 import Data.HUtils
 import Data.List
 import Language.HKanren.Core
-import Language.HKanren.Subst (SingI, Sing)
+import Language.HKanren.Subst (TypeI, Type)
 
 -- | Disjunction of many clauses. This can be thought as a logical
 -- switch.
@@ -25,7 +25,7 @@ program = foldr conj success
 
 -- | Only grab n solutions. Useful for when the full logic program
 -- might not terminate. Or takes its sweet time to do so.
-runN :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, SingI (h (Term h)) ix, HOrdHet (Sing (h (Term h))))
+runN :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, TypeI (h (Term h)) ix, HOrdHet (Type (h (Term h))))
      => Integer -> (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
 runN n = genericTake n . run
 

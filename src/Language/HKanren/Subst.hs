@@ -44,8 +44,8 @@ module Language.HKanren.Subst
   -- , suc'
   , Term
   , ClosedTerm
-  , SingI(..)
-  , SingOpt(..)
+  , TypeI(..)
+  , TypeOpt(..)
 
   , If
   , Or
@@ -77,109 +77,95 @@ type family Or (a :: Bool) (b :: Bool) :: Bool where
 
 type family Equal (a :: k) (b :: k) :: Bool
 
-class SingI (a :: k) (ix :: *) where
+class TypeI (a :: k) (ix :: *) where
   type SupportsIx a ix :: Bool
-  data Sing a :: * -> *
-  sing :: Sing a ix
+  data Type a :: * -> *
+  singType :: Type a ix
 
-class SingOpt (a :: k) (ix :: *) where
-  singOpt :: Maybe (Sing a ix)
+class TypeOpt (a :: k) (ix :: *) where
+  singTypeOpt :: Maybe (Type a ix)
 
--- instance (SingI f ix) => SingI (HFix f) ix where
---   data Sing (HFix f) ix where
---     THFix :: Sing f ix -> Sing (HFix f) ix
---   sing = THFix sing
+-- instance (TypeI f ix) => TypeI (HFix f) ix where
+--   data Type (HFix f) ix where
+--     THFix :: Type f ix -> Type (HFix f) ix
+--   singType = THFix singType
 
-instance (SingI (f (HFree f a)) ix) => SingI (HFree f a) ix where
+instance (TypeI (f (HFree f a)) ix) => TypeI (HFree f a) ix where
   type SupportsIx (HFree f a) ix = SupportsIx (f (HFree f a)) ix
-  data Sing (HFree f a) ix where
-    -- THPure :: Sing a ix -> Sing (HFree f a) ix
-    THFree :: Sing (f (HFree f a)) ix -> Sing (HFree f a) ix
-  sing = THFree sing
+  data Type (HFree f a) ix where
+    -- THPure :: Type a ix -> Type (HFree f a) ix
+    THFree :: Type (f (HFree f a)) ix -> Type (HFree f a) ix
+  singType = THFree singType
 
-instance (HEq (Sing (f (HFree f a)))) => HEq (Sing (HFree f a)) where
+instance (HEq (Type (f (HFree f a)))) => HEq (Type (HFree f a)) where
   heq (THFree x) (THFree y) = heq x y
 
-instance (HEqHet (Sing (f (HFree f a)))) => HEqHet (Sing (HFree f a)) where
+instance (HEqHet (Type (f (HFree f a)))) => HEqHet (Type (HFree f a)) where
   heqIx (THFree x) (THFree y) = heqIx x y
 
-instance (HOrd (Sing (f (HFree f a)))) => HOrd (Sing (HFree f a)) where
+instance (HOrd (Type (f (HFree f a)))) => HOrd (Type (HFree f a)) where
   hcompare (THFree x) (THFree y) = hcompare x y
 
-instance (HOrdHet (Sing (f (HFree f a)))) => HOrdHet (Sing (HFree f a)) where
+instance (HOrdHet (Type (f (HFree f a)))) => HOrdHet (Type (HFree f a)) where
   hcompareIx (THFree x) (THFree y) = hcompareIx x y
 
-instance (SingI (f r) ix, SingOpt (g r) ix) => SingI ((:+:) f g r) ix where
+instance (TypeI (f r) ix, TypeI (g r) ix) => TypeI ((:+:) f g r) ix where
   type SupportsIx ((:+:) f g r) ix = Or (SupportsIx (f r) ix) (SupportsIx (g r) ix)
-  data Sing ((:+:) f g r) ix where
-    TInl :: Sing (f r) ix -> Sing ((:+:) f g r) ix
-    TInr :: Sing (g r) ix -> Sing ((:+:) f g r) ix
-  sing =
-    case singOpt :: Maybe (Sing (g r) ix) of
-      Just x  -> TInr x
-      Nothing -> TInl sing
+  data Type ((:+:) f g r) ix where
+    TSum :: If (SupportsIx (f r) ix) (Type (f r) ix) (Type (g r) ix) -> Type ((:+:) f g r) ix
+  singType = TSum singType
 
-instance (SingOpt (f r) ix, SingOpt (g r) ix) => SingOpt ((:+:) f g r) ix where
-  singOpt =
-    case singOpt :: Maybe (Sing (f r) ix) of
-      Just x  -> Just $ TInl x
-      Nothing -> TInr <$> singOpt
-
--- instance (SingOpt (f r) ix, SingOpt (g r) ix) => SingI ((:+:) f g r) ix where
---   data Sing ((:+:) f g r) ix where
---     TInl :: Sing (f r) ix -> Sing ((:+:) f g r) ix
---     TInr :: Sing (g r) ix -> Sing ((:+:) f g r) ix
---   sing =
---     case singOpt :: Maybe (Sing (f r) ix) of
---       Just x  -> TInl x
---       Nothing ->
---         case singOpt :: Maybe (Sing (g r) ix) of
---           Just y  -> TInr y
---           Nothing -> error "impossible"
+-- instance (TypeOpt (f r) ix, TypeOpt (g r) ix) => TypeOpt ((:+:) f g r) ix where
+--   singTypeOpt =
+--     case singTypeOpt :: Maybe (Type (f r) ix) of
+--       Just x  -> Just $ TInl x
+--       Nothing -> TInr <$> singTypeOpt
+--
+-- -- instance (TypeOpt (f r) ix, TypeOpt (g r) ix) => TypeI ((:+:) f g r) ix where
+-- --   data Type ((:+:) f g r) ix where
+-- --     TInl :: Type (f r) ix -> Type ((:+:) f g r) ix
+-- --     TInr :: Type (g r) ix -> Type ((:+:) f g r) ix
+-- --   singType =
+-- --     case singTypeOpt :: Maybe (Type (f r) ix) of
+-- --       Just x  -> TInl x
+-- --       Nothing ->
+-- --         case singTypeOpt :: Maybe (Type (g r) ix) of
+-- --           Just y  -> TInr y
+-- --           Nothing -> error "impossible"
 
 
-instance (HEq (Sing (f r)), HEq (Sing (g r))) => HEq (Sing ((:+:) f g r)) where
-  heq (TInl x) (TInl x') = heq x x'
-  heq (TInr y) (TInr y') = heq y y'
-  heq _        _         = False
+instance (HEq (Type (f r)), HEq (Type (g r))) => HEq (Type ((:+:) f g r)) where
+  heq (TSum x) (TSum x') = heq x x'
 
-instance (HEqHet (Sing (f r)), HEqHet (Sing (g r))) => HEqHet (Sing ((:+:) f g r)) where
-  heqIx (TInl x) (TInl x') = heqIx x x'
-  heqIx (TInr y) (TInr y') = heqIx y y'
-  heqIx _        _         = Nothing
+instance (HEqHet (Type (f r)), HEqHet (Type (g r))) => HEqHet (Type ((:+:) f g r)) where
+  heqIx (TSum x) (TSum x') = heqIx x x'
 
-instance (HOrd (Sing (f r)), HOrd (Sing (g r))) => HOrd (Sing ((:+:) f g r)) where
-  hcompare (TInl x) (TInl x') = hcompare x x'
-  hcompare (TInl _) (TInr _)  = LT
-  hcompare (TInr y) (TInr y') = hcompare y y'
-  hcompare (TInr _) (TInl _)  = GT
+instance (HOrd (Type (f r)), HOrd (Type (g r))) => HOrd (Type ((:+:) f g r)) where
+  hcompare (TSum x) (TSum x') = hcompare x x'
 
-instance (HOrdHet (Sing (f r)), HOrdHet (Sing (g r))) => HOrdHet (Sing ((:+:) f g r)) where
-  hcompareIx (TInl x) (TInl x') = hcompareIx x x'
-  hcompareIx (TInl _) (TInr _)  = HLT
-  hcompareIx (TInr y) (TInr y') = hcompareIx y y'
-  hcompareIx (TInr _) (TInl _)  = HGT
+instance (HOrdHet (Type (f r)), HOrdHet (Type (g r))) => HOrdHet (Type ((:+:) f g r)) where
+  hcompareIx (TSum x) (TSum x') = hcompareIx x x'
 
 -- | Logic variable.
 data LVar (f :: (* -> *) -> (* -> *)) ix where
-  LVar :: Integer -> Sing (f (Term f)) ix -> LVar f ix
+  LVar :: Integer -> Type (f (Term f)) ix -> LVar f ix
   -- deriving (Show, Eq, Ord)
 
 instance HEq (LVar h) where
-  -- heq :: (Eq (Sing ix)) => LVar h ix -> LVar h ix -> Bool
+  -- heq :: (Eq (Type ix)) => LVar h ix -> LVar h ix -> Bool
   -- heq (LVar n x) (LVar m y) = n == m && (==) x y
   heq (LVar n _) (LVar m _) = n == m
 
-instance (HEqHet (Sing (h (Term h)))) => HEqHet (LVar h) where
+instance (HEqHet (Type (h (Term h)))) => HEqHet (LVar h) where
   heqIx (LVar _ x) (LVar _ y) =
     case heqIx x y of
       Just Refl -> Just Refl
       Nothing   -> Nothing
 
-instance (HOrd (Sing (h (Term h)))) => HOrd (LVar h) where
+instance (HOrd (Type (h (Term h)))) => HOrd (LVar h) where
   hcompare (LVar n x) (LVar m y) = compare n m <> hcompare x y
 
-instance (HOrdHet (Sing (h (Term h)))) => HOrdHet (LVar h) where
+instance (HOrdHet (Type (h (Term h)))) => HOrdHet (LVar h) where
   hcompareIx (LVar _ x) (LVar _ y) = hcompareIx x y
 
 instance HShow (LVar f) where
@@ -191,21 +177,21 @@ instance HShow (LVar f) where
 -- suc' :: (HFunctor h) => LVar h ix -> h f ix' -> LVar h ix'
 -- suc' (LVar n _) y = LVar (n + 1) $ hfmap (const $ K ()) y
 
-mkLVar :: (SingI (h (Term h)) ix) => Integer -> LVar h ix
-mkLVar n = LVar n sing
+mkLVar :: (TypeI (h (Term h)) ix) => Integer -> LVar h ix
+mkLVar n = LVar n singType
 
 -- mkLVarType :: (TypeRep h) => Integer -> Type h ix -> LVar h ix
 -- mkLVarType n t = LVar n t
 
 newtype Subst h = Subst (HMap (LVar h) (Term h))
 
-lookup :: (HOrdHet (Sing (h (Term h)))) => LVar h ix -> Subst h -> Maybe (Term h ix)
+lookup :: (HOrdHet (Type (h (Term h)))) => LVar h ix -> Subst h -> Maybe (Term h ix)
 lookup k (Subst s) = HM.lookup k s
 
 lookupVar :: Integer -> Subst h -> Maybe (Some (Term h))
 lookupVar n (Subst s) = HM.lookupWith (\(LVar m _) -> compare n m) s
 
-extend :: (HOrdHet (Sing (h (Term h)))) => LVar h ix -> Term h ix -> Subst h -> Subst h
+extend :: (HOrdHet (Type (h (Term h)))) => LVar h ix -> Term h ix -> Subst h -> Subst h
 extend k v (Subst s) = Subst $ HM.insert k v s
 
 domain :: Subst h -> [Some (LVar h)]

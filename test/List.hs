@@ -14,21 +14,21 @@ import Test.Tasty.QuickCheck hiding ((===))
 import QuickCheckHelper
 
 appendo
-  :: (SingI (LispTermF LispTerm) ix) =>
+  :: (TypeI (LispTermF LispTerm) ix) =>
      LispTerm (List ix)
   -> LispTerm (List ix)
   -> LispTerm (List ix)
   -> Predicate LispTermF
 appendo l r o =
-  conde [ program [ l === inject (Nil sing)
+  conde [ program [ l === inject (Nil singType)
                   , o === r
                   ]
         , fresh $ \h ->
             fresh $ \t ->
               fresh $ \o' ->
-                 program [ inject (Cons sing h t)   === l
+                 program [ inject (Cons singType h t)   === l
                          , appendo t r o'
-                         , inject (Cons sing h o')  === o
+                         , inject (Cons singType h o')  === o
                          ]
         ]
 
@@ -43,7 +43,7 @@ assertHEqual actual expected =
     msg = "expected: " ++ hshow expected ++ "\n but got: " ++ hshow actual
 
 listTest
-  :: forall ix. (SingI (LispTermF LispTerm) ix)
+  :: forall ix. (TypeI (LispTermF LispTerm) ix)
   => String
   -> Integer
   -> (LispTerm ix
@@ -63,7 +63,7 @@ listTest testName n query expectedAnswers =
     go _                (a:_)  = assertFailure $ "no more results while expecting more answers, e.g.: " ++ hshow a
 
 appendTest
-  :: (SingI (LispTermF LispTerm) ix)
+  :: (TypeI (LispTermF LispTerm) ix)
   => String
   -> Integer
   -> LispTerm (List ix)
@@ -74,7 +74,7 @@ appendTest testName n xs ys zs =
   listTest testName n (\q -> appendo xs ys q) [zs]
 
 appendTest'
-  :: (SingI (LispTermF LispTerm) ix)
+  :: (TypeI (LispTermF LispTerm) ix)
   => String
   -> [LispTermF LispTerm ix]
   -> [LispTermF LispTerm ix]
