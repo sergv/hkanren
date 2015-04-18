@@ -121,12 +121,12 @@ instance (HTraversable (TypeOf f), HTraversable (TypeOf g)) => HTraversable (Typ
   htraverse f (TInr y) = TInr <$> htraverse f y
 
 
-instance {-# OVERLAPS #-} TypeOf f :<: TypeOf (f :+: g) where
+instance {- # OVERLAPS #-} TypeOf f :<: TypeOf (f :+: g) where
   inj = TInl
   proj (TInl x) = Just x
   proj _        = Nothing
 
-instance {-# OVERLAPS #-} (TypeOf f :<: TypeOf g) => TypeOf f :<: TypeOf (h :+: g) where
+instance {- # OVERLAPS #-} (TypeOf f :<: TypeOf g) => TypeOf f :<: TypeOf (h :+: g) where
   inj = TInr . inj
   proj (TInr x) = proj x
   proj _        = Nothing

@@ -182,12 +182,12 @@ instance f :<: f where
   inj  = id
   proj = Just
 
-instance {-# OVERLAPS #-} f :<: (f :+: g) where
+instance {- # OVERLAPS #-} f :<: (f :+: g) where
   inj = Inl
   proj (Inl x) = Just x
   proj _       = Nothing
 
-instance {-# OVERLAPS #-} (f :<: g) => f :<: (h :+: g) where
+instance {- # OVERLAPS #-} (f :<: g) => f :<: (h :+: g) where
   inj = Inr . inj
   proj (Inr x) = proj x
   proj _       = Nothing
