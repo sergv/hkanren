@@ -54,6 +54,7 @@ module Language.HKanren
   , mkLVar
   , Subst
   , SingI(..)
+  , SingOpt(..)
   )
 where
 

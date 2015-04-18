@@ -45,6 +45,7 @@ module Language.HKanren.Subst
   , Term
   , ClosedTerm
   , SingI(..)
+  , SingOpt(..)
   )
 where
 
@@ -53,32 +54,49 @@ import qualified Data.HMap as HM
 import Data.HOrdering
 import Data.HUtils
 import Data.Monoid
-import Data.Singletons
-import Data.Singletons.Prelude.List
-import Data.Singletons.Prelude
-import Data.Singletons.TH
-import Data.Singletons.TypeLits
 import Data.Type.Equality
 
 import Prelude hiding (lookup)
 
 type ClosedTerm h = HFix h
 -- type Type t = ClosedTerm (TypeOf t)
-type Term h = HFree h (LVar h)
+type Term h = HFree h (LVar (ClosedTerm h))
 
 
--- class SingI (a :: k) where
---   data Sing :: k -> *
---   sing :: Sing a
+class SingI (a :: * -> *) (ix :: *) where
+  data Sing a :: * -> *
+  sing :: Sing a ix
 
-singOf :: (SingI ix) => p ix -> Sing ix
-singOf _ = sing
+class SingOpt (a :: * -> *) (ix :: *) where
+  singOpt :: Maybe (Sing a ix)
 
-class SHEq (h :: * -> *) where
-  sheq :: (Eq (Sing ix), SingI ix) => h ix -> h ix -> Bool
+instance (SingI (f (HFix f ix)) ix) => SingI (HFix f ix) ix where
+  data Sing (HFix f ix) ix where
+    THFix :: Sing f ix -> Sing (HFix f ix) ix
+  sing = THFix sing
 
-class SHEqHet (h :: * -> *) where
-  sheqIx :: (SingI ix, SingI ix') => h ix -> h ix' -> Maybe (ix :~: ix')
+instance (SingI (f (HFix f ix)) ix) => SingI (HFree f a ix) ix where
+  data Sing (HFree f a ix) ix where
+    THFree :: Sing f ix -> Sing (HFree f a ix) ix
+  sing = THFree sing
+
+instance (SingOpt f ix, SingI g ix) => SingI ((:+:) f g r) ix where
+  data Sing ((:+:) f g r) ix where
+    TInl :: Sing f ix -> Sing ((:+:) f g r) ix
+    TInr :: Sing g ix -> Sing ((:+:) f g r) ix
+  sing =
+    case singOpt :: Maybe (Sing f ix) of
+      Just x  -> TInl x
+      Nothing -> TInr sing
+
+instance (SingOpt f ix, SingI g ix) => SingOpt ((:+:) f g r) ix where
+  singOpt =
+    case singOpt :: Maybe (Sing f ix) of
+      Just x  -> Just $ TInl x
+      Nothing -> Just $ TInr sing
+
+-- singOf :: (SingI h ix) => p ix -> Sing h ix
+-- singOf _ = sing
 
 -- cannot define these
 -- instance HEq Sing where
@@ -98,15 +116,9 @@ class SHEqHet (h :: * -> *) where
 
 
 -- | Logic variable.
-data LVar (f :: (* -> *) -> (* -> *)) ix where
-  LVar :: Integer -> Sing ix -> LVar f ix
+data LVar (f :: * -> *) ix where
+  LVar :: Integer -> Sing f ix -> LVar f ix
   -- deriving (Show, Eq, Ord)
-
-instance SHEq (LVar h) where
-  sheq (LVar n x) (LVar m y) = n == m && (==) x y
-
--- instance SHEqHet (LVar h) where
---   sheqIx (LVar n x) (LVar m y) = Just Refl -- n == m && (==) (singOf x) (singOf y)
 
 
 instance HEq (LVar h) where
@@ -114,17 +126,17 @@ instance HEq (LVar h) where
   -- heq (LVar n x) (LVar m y) = n == m && (==) x y
   heq (LVar n _) (LVar m _) = n == m
 
--- instance (HOrdHet Sing) => HEqHet (LVar h) where
---   heqIx (LVar _ x) (LVar _ y) =
---     case heqIx x y of
---       Just Refl -> Just Refl
---       Nothing   -> Nothing
+instance (HEqHet (Sing h)) => HEqHet (LVar h) where
+  heqIx (LVar _ x) (LVar _ y) =
+    case heqIx x y of
+      Just Refl -> Just Refl
+      Nothing   -> Nothing
 
-instance (HOrd Sing) => HOrd (LVar h) where
+instance (HOrd (Sing h)) => HOrd (LVar h) where
   hcompare (LVar n x) (LVar m y) = compare n m <> hcompare x y
 
--- instance (HOrdHet Sing) => HOrdHet (LVar h) where
---   hcompareIx (LVar _ x) (LVar _ y) = hcompareIx x y
+instance (HOrdHet (Sing h)) => HOrdHet (LVar h) where
+  hcompareIx (LVar _ x) (LVar _ y) = hcompareIx x y
 
 instance HShow (LVar f) where
   hshowsPrec n (LVar m _) = \xs -> showParen (n == 11) (\ys -> "LVar " ++ show m ++ ys) xs
@@ -135,21 +147,21 @@ instance HShow (LVar f) where
 -- suc' :: (HFunctor h) => LVar h ix -> h f ix' -> LVar h ix'
 -- suc' (LVar n _) y = LVar (n + 1) $ hfmap (const $ K ()) y
 
-mkLVar :: (SingI ix) => Integer -> LVar h ix
+mkLVar :: (SingI h ix) => Integer -> LVar h ix
 mkLVar n = LVar n sing
 
 -- mkLVarType :: (TypeRep h) => Integer -> Type h ix -> LVar h ix
 -- mkLVarType n t = LVar n t
 
-newtype Subst h = Subst (HMap (LVar h) (Term h))
+newtype Subst h = Subst (HMap (LVar (ClosedTerm h)) (Term h))
 
-lookup :: LVar h ix -> Subst h -> Maybe (Term h ix)
+lookup :: (HEqHet (Sing h), HOrdHet (Sing h)) => LVar h ix -> Subst h -> Maybe (Term h ix)
 lookup k (Subst s) = HM.lookup k s
 
 lookupVar :: Integer -> Subst h -> Maybe (Some (Term h))
 lookupVar n (Subst s) = HM.lookupWith (\(LVar m _) -> compare n m) s
 
-extend :: LVar h ix -> Term h ix -> Subst h -> Subst h
+extend :: (HEqHet (Sing h), HOrdHet (Sing h)) => LVar h ix -> Term h ix -> Subst h -> Subst h
 extend k v (Subst s) = Subst $ HM.insert k v s
 
 domain :: Subst h -> [Some (LVar h)]
