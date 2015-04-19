@@ -58,11 +58,11 @@ listTest testName n query expectedAnswers =
     []      -> assertFailure "no results"
     results -> go results expectedAnswers
   where
-    go :: [(Some LispTerm, [Some (Neq LispTermF)])] -> [LispTerm ix] -> Assertion
-    go []               []     = return ()
-    go ((Some t, _):rs) (a:as) = assertHEqual t a >> go rs as
-    go ((Some t, _):_)  []     = assertFailure $ "more results than answers, next result: " ++ hshow t
-    go _                (a:_)  = assertFailure $ "no more results while expecting more answers, e.g.: " ++ hshow a
+    go :: [(LispTerm ix, [Some (Neq LispTermF)])] -> [LispTerm ix] -> Assertion
+    go []               []    = return ()
+    go ((t, _):rs) (a:as)     = assertHEqual t a >> go rs as
+    go ((t, _):_)  []         = assertFailure $ "more results than answers, next result: " ++ hshow t
+    go _                (a:_) = assertFailure $ "no more results while expecting more answers, e.g.: " ++ hshow a
 
 appendTest
   :: (TypeI (LispTermF LispTerm) ix)
@@ -127,27 +127,27 @@ appendTests = testGroup "append tests"
       ([iAtom "foo", iAtom "bar", iAtom "baz"] :: [LispTermF LispTerm Atom])
       [iAtom "x", iAtom "y", iAtom "z"]
       [iAtom "foo", iAtom "bar", iAtom "baz", iAtom "x", iAtom "y", iAtom "z"]
-  -- , listTest
-  --     "append, infer input"
-  --     1
-  --     (\q -> appendo
-  --              q
-  --              (ilist [])
-  --              (ilist [iAtom "foo", iAtom "bar"]))
-  --     ([ilist [iAtom "foo", iAtom "bar"]] :: [LispTermF LispTerm Atom])
-  -- , appendTest'
-  --     "append 2d lists #1"
-  --     [ list ([iAtom "foo"] :: [LispTermF LispTerm Atom])
-  --     , list [iAtom "bar", iAtom "baz"]
-  --     ]
-  --     [ list [iAtom "x", iAtom "y"]
-  --     , list [iAtom "z"]
-  --     ]
-  --     [ list [iAtom "foo"]
-  --     , list [iAtom "bar", iAtom "baz"]
-  --     , list [iAtom "x", iAtom "y"]
-  --     , list [iAtom "z"]
-  --     ]
+  , listTest
+      "append, infer input"
+      1
+      (\q -> appendo
+               q
+               (ilist [])
+               (ilist [iAtom "foo", iAtom "bar"]))
+      ([ilist [iAtom "foo", iAtom "bar"]] :: [LispTerm (List Atom)])
+  , appendTest'
+      "append 2d lists #1"
+      [ list ([iAtom "foo"] :: [LispTermF LispTerm Atom])
+      , list [iAtom "bar", iAtom "baz"]
+      ]
+      [ list [iAtom "x", iAtom "y"]
+      , list [iAtom "z"]
+      ]
+      [ list [iAtom "foo"]
+      , list [iAtom "bar", iAtom "baz"]
+      , list [iAtom "x", iAtom "y"]
+      , list [iAtom "z"]
+      ]
   ]
 
 -- heado :: LispTerm ix -> LispTerm ix -> Predicate LispTermF

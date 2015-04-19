@@ -25,8 +25,8 @@ program = foldr conj success
 
 -- | Only grab n solutions. Useful for when the full logic program
 -- might not terminate. Or takes its sweet time to do so.
-runN :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, TypeI (h (Term h)) ix, HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h))))
-     => Integer -> (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
+runN :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, TypeI (h (Term h)) ix, HOrdHet (Type (h (Term h))), HShow (h (Term h)))
+     => Integer -> (Term h ix -> Predicate h) -> [(Term h ix, [Some (Neq h)])]
 runN n = genericTake n . run
 
 -- -- | We often want to introduce many fresh variables at once. We've

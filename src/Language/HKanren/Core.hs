@@ -182,14 +182,16 @@ success :: Predicate h
 success = Predicate return
 
 -- | Run a program and find all solutions for the parametrized term.
-run :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, TypeI (h (Term h)) ix, HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h))))
-    => (Term h ix -> Predicate h) -> [(Some (Term h), [Some (Neq h)])]
+run :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, TypeI (h (Term h)) ix, HOrdHet (Type (h (Term h))), HShow (h (Term h)))
+    => (Term h ix -> Predicate h) -> [(Term h ix, [Some (Neq h)])]
 run mkProg = catMaybes $ map answer $ observeAll prog
   where
-    initVar = 0
-    prog = unPred (fresh mkProg) (State S.empty initVar [])
-    answer :: State h -> Maybe (Some (Term h), [Some (Neq h)])
+    initVarIdx = 0
+    initVar :: LVar h ix
+    initVar = mkLVar initVarIdx
+    prog = unPred (fresh mkProg) (State S.empty initVarIdx [])
+    answer :: State h -> Maybe (Term h ix, [Some (Neq h)])
     answer State{subst, neq} =
-      case S.lookupVar initVar subst of
-        Just (Some t) -> Just (Some $ canonize subst t, neq)
-        Nothing       -> Nothing
+      case S.lookup initVar subst of
+        Just t  -> Just (canonize subst t, neq)
+        Nothing -> Nothing
