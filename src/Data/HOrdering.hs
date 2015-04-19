@@ -23,13 +23,11 @@ import Data.Type.Equality
 class HEq (h :: * -> *) where
   heq :: h ix -> h ix -> Bool
 
-class (HEq h) => HEqHet (h :: * -> *) where
+class HEqHet (h :: * -> *) where
   heqIx :: h ix -> h ix' -> Maybe (ix :~: ix')
-  (==*) :: h ix -> h ix' -> Bool
-  (==*) = heqHetDefault
 
-heqHetDefault :: (HEqHet f) => f ix -> f ix' -> Bool
-heqHetDefault x y =
+(==*) :: (HEq f, HEqHet f) => f ix -> f ix' -> Bool
+(==*) x y =
   case heqIx x y of
     Just Refl -> heq x y
     Nothing   -> False
@@ -42,15 +40,18 @@ data HOrdering ix ix' where
   HEQ :: ix :~: ix' -> HOrdering ix ix'
   HGT :: HOrdering ix ix'
 
+hordering2ordering :: HOrdering ix ix' -> Ordering
+hordering2ordering HLT     = LT
+hordering2ordering (HEQ _) = EQ
+hordering2ordering HGT     = GT
+
 -- What to return when two indices are just not equal, but it's unknown which one
 -- is greater?
-class (HEqHet h, HOrd h) => HOrdHet (h :: * -> *) where
+class (HEqHet h) => HOrdHet (h :: * -> *) where
   hcompareIx :: h ix -> h ix' -> HOrdering ix ix'
-  hcompareHet :: h ix -> h ix' -> Ordering
-  hcompareHet = hcompareHetDefault
 
-hcompareHetDefault :: (HOrdHet f) => f ix -> f ix' -> Ordering
-hcompareHetDefault x y =
+hcompareHet :: (HOrd f, HOrdHet f) => f ix -> f ix' -> Ordering
+hcompareHet x y =
   case hcompareIx x y of
     HLT      -> LT
     HEQ Refl -> hcompare x y

@@ -163,13 +163,13 @@ instance HEq (LVar h) where
   heq (LVar n _) (LVar m _) = n == m
 
 instance (HEqHet (Type (h (Term h)))) => HEqHet (LVar h) where
-  heqIx (LVar _ x) (LVar _ y) =
-    case heqIx x y of
-      Just Refl -> Just Refl
-      Nothing   -> Nothing
+  heqIx (LVar _ x) (LVar _ y) = heqIx x y
+
+-- instance HOrd (LVar h) where
+--   hcompare (LVar n _) (LVar m _) = compare n m
 
 instance (HOrd (Type (h (Term h)))) => HOrd (LVar h) where
-  hcompare (LVar n x) (LVar m y) = compare n m <> hcompare x y
+  hcompare (LVar n x) (LVar m y) = hcompare x y <> compare n m
 
 instance (HOrdHet (Type (h (Term h)))) => HOrdHet (LVar h) where
   hcompareIx (LVar _ x) (LVar _ y) = hcompareIx x y
@@ -191,13 +191,13 @@ mkLVar n = LVar n singType
 
 newtype Subst h = Subst (HMap (LVar h) (Term h))
 
-lookup :: (HOrdHet (Type (h (Term h)))) => LVar h ix -> Subst h -> Maybe (Term h ix)
+lookup :: (HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h)))) => LVar h ix -> Subst h -> Maybe (Term h ix)
 lookup k (Subst s) = HM.lookup k s
 
 lookupVar :: Integer -> Subst h -> Maybe (Some (Term h))
 lookupVar n (Subst s) = HM.lookupWith (\(LVar m _) -> compare n m) s
 
-extend :: (HOrdHet (Type (h (Term h)))) => LVar h ix -> Term h ix -> Subst h -> Subst h
+extend :: (HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h)))) => LVar h ix -> Term h ix -> Subst h -> Subst h
 extend k v (Subst s) = Subst $ HM.insert k v s
 
 domain :: Subst h -> [Some (LVar h)]

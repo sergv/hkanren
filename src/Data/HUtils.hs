@@ -162,10 +162,10 @@ type HUnit = K ()
 
 data Some f = forall ix. Some (f ix)
 
-instance (HEqHet f) => Eq (Some f) where
+instance (HEq f, HEqHet f) => Eq (Some f) where
   Some x == Some y = x ==* y
 
-instance (HOrdHet f) => Ord (Some f) where
+instance (HOrd f, HOrdHet f) => Ord (Some f) where
   compare (Some x) (Some y) =
     case hcompareIx x y of
       HLT      -> LT

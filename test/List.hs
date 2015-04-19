@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE TypeOperators       #-}
 
 module Main where
 
@@ -12,11 +13,11 @@ import Language.HKanren
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck hiding ((===))
-import QuickCheckHelper
+
+import LispLists
 
 appendo
-  :: forall ix.
-     (TypeI (LispTermF LispTerm) ix, TypeI (LispTermF LispTerm) (List ix))
+  :: forall ix. (TypeI (LispTermF LispTerm) ix)
   => LispTerm (List ix)
   -> LispTerm (List ix)
   -> LispTerm (List ix)
@@ -35,7 +36,7 @@ appendo l r o =
         ]
 
 assertHEqual
-  :: (HEqHet f, HShow f)
+  :: (HEq f, HEqHet f, HShow f)
   => f ix   -- ^ The expected value
   -> f ix'  -- ^ The actual value
   -> Assertion
@@ -45,7 +46,7 @@ assertHEqual actual expected =
     msg = "expected: " ++ hshow expected ++ "\n but got: " ++ hshow actual
 
 listTest
-  :: forall ix. (TypeI (LispTermF LispTerm) ix, TypeI (LispTermF LispTerm) (List ix))
+  :: forall ix. (TypeI (LispTermF LispTerm) ix)
   => String
   -> Integer
   -> (LispTerm ix -> Predicate LispTermF)
@@ -64,11 +65,7 @@ listTest testName n query expectedAnswers =
     go _                (a:_)  = assertFailure $ "no more results while expecting more answers, e.g.: " ++ hshow a
 
 appendTest
-  :: forall ix.
-     ( TypeI (LispTermF LispTerm) ix
-     , TypeI (LispTermF LispTerm) (List ix)
-     , TypeI (LispTermF LispTerm) (List (List ix))
-     )
+  :: (TypeI (LispTermF LispTerm) ix)
   => String
   -> Integer
   -> LispTerm (List ix)
@@ -83,18 +80,19 @@ appendTest testName n xs ys zs =
     [zs]
 
 appendTest'
-  :: String
-  -> [LispTermF LispTerm Atom]
-  -> [LispTermF LispTerm Atom]
-  -> [LispTermF LispTerm Atom]
+  :: (TypeI (LispTermF LispTerm) ix)
+  => String
+  -> [LispTermF LispTerm ix]
+  -> [LispTermF LispTerm ix]
+  -> [LispTermF LispTerm ix]
   -> TestTree
 appendTest' testName xs ys zs =
   appendTest
     testName
     1
-    (ilist xs :: LispTerm (List Atom))
-    (ilist ys :: LispTerm (List Atom))
-    (ilist zs :: LispTerm (List Atom))
+    (ilist xs)
+    (ilist ys)
+    (ilist zs)
 
 -- atomType :: LispType Atom
 -- atomType = HFix $ iTAtom
@@ -192,6 +190,85 @@ appendTests = testGroup "append tests"
 --     -- , isTail
 --     ]
 
+hcompareIxTest :: (HOrdHet f) => String -> f ix -> f ix' -> Ordering -> TestTree
+hcompareIxTest name x y expected =
+  testCase name $
+  assertEqual "" expected (hordering2ordering (hcompareIx x y))
+
+-- lisp term ordered naturally
+type OrderedLispTermF = AtomF :+: ListF
+type OrderedLispTerm = Term OrderedLispTermF
+
+-- lisp term ordered unnatuarlly but this ordering should also be acceptable
+type ReversedLispTermF = ListF :+: AtomF
+type ReversedLispTerm = Term ReversedLispTermF
+
+ixComparisonTests :: TestTree
+ixComparisonTests = testGroup "index comparison tests"
+  [ hcompareIxTest
+      "atom == atom"
+      (Atom "foo")
+      (Atom "bar")
+      EQ
+  , testGroup "naturally ordered term"
+      [ hcompareIxTest
+          "atom : LispType == atom : LispType"
+          (inj (Atom "foo") :: OrderedLispTermF OrderedLispTerm Atom)
+          (inj (Atom "bar") :: OrderedLispTermF OrderedLispTerm Atom)
+          EQ
+      , hcompareIxTest
+          "atom < [atom]"
+          (inj (Atom "foo")   :: OrderedLispTermF OrderedLispTerm Atom)
+          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
+          LT
+      , hcompareIxTest
+          "[atom] > atom"
+          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
+          (inj (Atom "foo")   :: OrderedLispTermF OrderedLispTerm Atom)
+          GT
+      , hcompareIxTest
+          "[atom] == [atom]"
+          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
+          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
+          EQ
+      , hcompareIxTest
+          "[atom] == [atom] #2"
+          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
+          (inj (Cons singType
+                     (inject (Atom "foo"))
+                     (inject (Nil singType))) :: OrderedLispTermF OrderedLispTerm (List Atom))
+          EQ
+      ]
+  , testGroup "reversed term"
+      [ hcompareIxTest
+          "atom : LispType == atom : LispType"
+          (inj (Atom "foo") :: ReversedLispTermF ReversedLispTerm Atom)
+          (inj (Atom "bar") :: ReversedLispTermF ReversedLispTerm Atom)
+          EQ
+      , hcompareIxTest
+          "atom < [atom]"
+          (inj (Atom "foo")   :: ReversedLispTermF ReversedLispTerm Atom)
+          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
+          GT
+      , hcompareIxTest
+          "[atom] > atom"
+          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
+          (inj (Atom "foo")   :: ReversedLispTermF ReversedLispTerm Atom)
+          LT
+      , hcompareIxTest
+          "[atom] == [atom]"
+          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
+          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
+          EQ
+      , hcompareIxTest
+          "[atom] == [atom] #2"
+          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
+          (inj (Cons singType
+                     (inject (Atom "foo"))
+                     (inject (Nil singType))) :: ReversedLispTermF ReversedLispTerm (List Atom))
+          EQ
+      ]
+  ]
 
 main :: IO ()
 main = defaultMain $
@@ -199,4 +276,5 @@ main = defaultMain $
   adjustOption (const $ QuickCheckMaxSize 1000) $
   testGroup "List Tests"
     [ appendTests
+    , ixComparisonTests
     ]

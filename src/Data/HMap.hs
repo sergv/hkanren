@@ -38,7 +38,7 @@ data HMap (k :: * -> *) (v :: * -> *) where
 empty :: HMap k v
 empty = HNil
 
-insert :: (HOrdHet k) => k ix -> v ix -> HMap k v -> HMap k v
+insert :: (HOrd k, HOrdHet k) => k ix -> v ix -> HMap k v -> HMap k v
 insert k v HNil = HNode k v HNil HNil
 insert k v (HNode k' v' left right) =
   case hcompareHet k k' of
@@ -57,7 +57,7 @@ lookupWith p (HNode k v left right) =
     EQ -> Just $ Some v
     GT -> lookupWith p right
 
-lookup :: (HOrdHet k) => k ix -> HMap k v -> Maybe (v ix)
+lookup :: (HOrd k, HOrdHet k) => k ix -> HMap k v -> Maybe (v ix)
 lookup _ HNil = Nothing
 lookup k (HNode k' v left right) =
   -- case hcompareHet k k' of
