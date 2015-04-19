@@ -56,6 +56,7 @@ module Language.HKanren
   , TypeI(..)
   , If
   , Equal
+  , typeOf
   )
 where
 

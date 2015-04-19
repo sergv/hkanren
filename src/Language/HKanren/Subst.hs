@@ -43,6 +43,7 @@ module Language.HKanren.Subst
   , TypeI(..)
   , If
   , Equal
+  , typeOf
   )
 where
 
@@ -66,6 +67,9 @@ class TypeI (a :: (* -> *)) (ix :: *) where
   type SupportsIx a ix :: Bool
   data Type a :: * -> *
   singType :: Type a ix
+
+typeOf :: (TypeI a ix) => p ix -> Type a ix
+typeOf _ = singType
 
 instance (TypeI (f (HFree f a)) ix) => TypeI (HFree f a) ix where
   type SupportsIx (HFree f a) ix = SupportsIx (f (HFree f a)) ix

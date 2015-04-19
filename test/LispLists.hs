@@ -4,8 +4,10 @@
 {-# LANGUAGE EmptyDataDecls            #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE InstanceSigs              #-}
 {-# LANGUAGE KindSignatures            #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeOperators             #-}
 {-# LANGUAGE UndecidableInstances      #-}
@@ -112,81 +114,85 @@ instance (HOrdHet (Type h)) => HOrdHet (Type (ListF h)) where
 
 
 data ListF :: (* -> *) -> (* -> *) where
-  Nil  :: Type r ix -> ListF r (List ix)
-  Cons :: Type r ix -> r ix -> r (List ix) -> ListF r (List ix)
+  Nil  :: (TypeI r ix) => ListF r (List ix)
+  Cons :: (TypeI r ix) => r ix -> r (List ix) -> ListF r (List ix)
+
+typeOfElems :: (TypeI f ix) => p f (List ix) -> Type f ix
+typeOfElems _ = singType
 
 instance (HFoldable h, HOrdHet (Type (h (Term h))), Unifiable h h) => Unifiable ListF h where
-  unify (Nil _)       (Nil _)       = return
-  unify (Cons _ x xs) (Cons _ y ys) =
+  unify Nil         Nil         = return
+  unify (Cons x xs) (Cons y ys) =
     unifyTerms x y >=> unifyTerms xs ys
   unify _ _ = const Nothing
 
 instance (HEq f) => HEq (ListF f) where
-  heq (Nil _)       (Nil _)       = True
-  heq (Cons _ x xs) (Cons _ y ys) = heq x y && heq xs ys
-  heq _             _             = False
+  heq Nil         Nil         = True
+  heq (Cons x xs) (Cons y ys) = heq x y && heq xs ys
+  heq _           _           = False
 
 instance (HEqHet (Type f)) => HEqHet (ListF f) where
-  heqIx (Nil t)       (Nil t')       =
-    case heqIx t t' of
+  heqIx :: forall ix ix'. ListF f ix -> ListF f ix' -> Maybe (ix :~: ix')
+  heqIx x@Nil        y@Nil =
+    case heqIx (typeOfElems x) (typeOfElems y) of
       Just Refl -> Just Refl
       Nothing   -> Nothing
-  heqIx (Nil t)       (Cons t' _ _)  =
-    case heqIx t t' of
+  heqIx x@Nil        y@(Cons _ _) =
+    case heqIx (typeOfElems x) (typeOfElems y) of
       Just Refl -> Just Refl
       Nothing   -> Nothing
-  heqIx (Cons t _ _)  (Nil t')       =
-    case heqIx t t' of
+  heqIx x@(Cons _ _) y@Nil =
+    case heqIx (typeOfElems x) (typeOfElems y) of
       Just Refl -> Just Refl
       Nothing   -> Nothing
-  heqIx (Cons t _x _) (Cons t' _y _) =
-    case heqIx t t' of
+  heqIx x@(Cons _ _) y@(Cons _ _) =
+    case heqIx (typeOfElems x) (typeOfElems y) of
       Just Refl -> Just Refl
       Nothing   -> Nothing
 
 instance (HOrd f) => HOrd (ListF f) where
-  hcompare (Nil _)       (Nil _)       = EQ
-  hcompare (Nil _)       (Cons _ _ _)  = LT
-  hcompare (Cons _ _ _)  (Nil _)       = GT
-  hcompare (Cons _ x xs) (Cons _ y ys) = hcompare x y <> hcompare xs ys
+  hcompare Nil         Nil         = EQ
+  hcompare Nil         (Cons _ _)  = LT
+  hcompare (Cons _ _)  Nil         = GT
+  hcompare (Cons x xs) (Cons y ys) = hcompare x y <> hcompare xs ys
 
 instance (HOrdHet (Type f)) => HOrdHet (ListF f) where
-  hcompareIx (Nil t)      (Nil t')      =
-    case hcompareIx t t' of
+  hcompareIx x@Nil        y@Nil        =
+    case hcompareIx (typeOfElems x) (typeOfElems y) of
       HLT      -> HLT
       HEQ Refl -> HEQ Refl
       HGT      -> HGT
-  hcompareIx (Nil t)      (Cons t' _ _) =
-    case hcompareIx t t' of
+  hcompareIx x@Nil        y@(Cons _ _) =
+    case hcompareIx (typeOfElems x) (typeOfElems y) of
       HLT      -> HLT
       HEQ Refl -> HEQ Refl
       HGT      -> HGT
-  hcompareIx (Cons t _ _) (Nil t')      =
-    case hcompareIx t t' of
+  hcompareIx x@(Cons _ _) y@Nil        =
+    case hcompareIx (typeOfElems x) (typeOfElems y) of
       HLT      -> HLT
       HEQ Refl -> HEQ Refl
       HGT      -> HGT
-  hcompareIx (Cons t _ _) (Cons t' _ _) =
-    case hcompareIx t t' of
+  hcompareIx x@(Cons _ _) y@(Cons _ _) =
+    case hcompareIx (typeOfElems x) (typeOfElems y) of
       HLT      -> HLT
       HEQ Refl -> HEQ Refl
       HGT      -> HGT
 
 instance HFunctorId ListF where
-  hfmapId _ (Nil t)       = Nil t
-  hfmapId f (Cons t x xs) = Cons t (f x) (f xs)
+  hfmapId _ Nil         = Nil
+  hfmapId f (Cons x xs) = Cons (f x) (f xs)
 
 -- instance HFunctor ListF where
 --   hfmap _ (Nil t)       = Nil t
 --   hfmap f (Cons t x xs) = Cons t (f x) (f xs)
 
 instance HFoldable ListF where
-  hfoldMap _ (Nil _)       = mempty
-  hfoldMap f (Cons _ x xs) = f x <> f xs
+  hfoldMap _ Nil         = mempty
+  hfoldMap f (Cons x xs) = f x <> f xs
 
 instance (HShow f) => HShow (ListF f) where
-  hshowsPrec _ (Nil _)       = \xs -> "Nil" ++ xs
-  hshowsPrec n (Cons _ x xs) =
+  hshowsPrec _ Nil         = \xs -> "Nil" ++ xs
+  hshowsPrec n (Cons x xs) =
     \ys -> showParen (n == 11) (\zs -> "Cons " ++ hshowsPrec 11 x (showChar ' ' $ hshowsPrec 11 xs zs)) ys
 
 
@@ -195,7 +201,7 @@ type LispTerm = Term LispTermF
 -- type LispType = Type LispTermF
 
 list :: (TypeI (LispTermF LispTerm) ix) => [LispTermF LispTerm ix] -> LispTermF LispTerm (List ix)
-list = foldr (\x y -> inj $ Cons singType (HFree x) (HFree y)) (inj $ Nil singType)
+list = foldr (\x y -> inj $ Cons (HFree x) (HFree y)) (inj Nil)
 
 ilist :: (TypeI (LispTermF LispTerm) ix) => [LispTermF LispTerm ix] -> LispTerm (List ix)
 ilist = HFree . list

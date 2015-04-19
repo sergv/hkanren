@@ -23,15 +23,15 @@ appendo
   -> LispTerm (List ix)
   -> Predicate LispTermF
 appendo l r o =
-  conde [ program [ l === inject (Nil singType)
+  conde [ program [ l === inject Nil
                   , o === r
                   ]
         , fresh $ \h ->
             fresh $ \(t :: LispTerm (List ix)) ->
               fresh $ \o' ->
-                 program [ inject (Cons singType h t)   === l
+                 program [ inject (Cons h t)   === l
                          , appendo t r o'
-                         , inject (Cons singType h o')  === o
+                         , inject (Cons h o')  === o
                          ]
         ]
 
@@ -236,25 +236,24 @@ ixComparisonTests = testGroup "index comparison tests"
           EQ
       , hcompareIxTest
           "atom < [atom]"
-          (inj (Atom "foo")   :: OrderedLispTermF OrderedLispTerm Atom)
-          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
+          (inj (Atom "foo") :: OrderedLispTermF OrderedLispTerm Atom)
+          (inj Nil          :: OrderedLispTermF OrderedLispTerm (List Atom))
           LT
       , hcompareIxTest
           "[atom] > atom"
-          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
-          (inj (Atom "foo")   :: OrderedLispTermF OrderedLispTerm Atom)
+          (inj Nil          :: OrderedLispTermF OrderedLispTerm (List Atom))
+          (inj (Atom "foo") :: OrderedLispTermF OrderedLispTerm Atom)
           GT
       , hcompareIxTest
           "[atom] == [atom]"
-          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
-          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
+          (inj Nil :: OrderedLispTermF OrderedLispTerm (List Atom))
+          (inj Nil :: OrderedLispTermF OrderedLispTerm (List Atom))
           EQ
       , hcompareIxTest
           "[atom] == [atom] #2"
-          (inj (Nil singType) :: OrderedLispTermF OrderedLispTerm (List Atom))
-          (inj (Cons singType
-                     (inject (Atom "foo"))
-                     (inject (Nil singType))) :: OrderedLispTermF OrderedLispTerm (List Atom))
+          (inj Nil :: OrderedLispTermF OrderedLispTerm (List Atom))
+          (inj (Cons (inject (Atom "foo"))
+                     (inject Nil)) :: OrderedLispTermF OrderedLispTerm (List Atom))
           EQ
       ]
   , testGroup "reversed term"
@@ -265,25 +264,24 @@ ixComparisonTests = testGroup "index comparison tests"
           EQ
       , hcompareIxTest
           "atom < [atom]"
-          (inj (Atom "foo")   :: ReversedLispTermF ReversedLispTerm Atom)
-          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
+          (inj (Atom "foo") :: ReversedLispTermF ReversedLispTerm Atom)
+          (inj Nil          :: ReversedLispTermF ReversedLispTerm (List Atom))
           GT
       , hcompareIxTest
           "[atom] > atom"
-          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
-          (inj (Atom "foo")   :: ReversedLispTermF ReversedLispTerm Atom)
+          (inj Nil          :: ReversedLispTermF ReversedLispTerm (List Atom))
+          (inj (Atom "foo") :: ReversedLispTermF ReversedLispTerm Atom)
           LT
       , hcompareIxTest
           "[atom] == [atom]"
-          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
-          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
+          (inj Nil :: ReversedLispTermF ReversedLispTerm (List Atom))
+          (inj Nil :: ReversedLispTermF ReversedLispTerm (List Atom))
           EQ
       , hcompareIxTest
           "[atom] == [atom] #2"
-          (inj (Nil singType) :: ReversedLispTermF ReversedLispTerm (List Atom))
-          (inj (Cons singType
-                     (inject (Atom "foo"))
-                     (inject (Nil singType))) :: ReversedLispTermF ReversedLispTerm (List Atom))
+          (inj Nil :: ReversedLispTermF ReversedLispTerm (List Atom))
+          (inj (Cons (inject (Atom "foo"))
+                     (inject Nil)) :: ReversedLispTermF ReversedLispTerm (List Atom))
           EQ
       ]
   ]
