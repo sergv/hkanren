@@ -56,13 +56,13 @@ listTest testName n query expectedAnswers =
   testCase testName $
   case runN n query of
     []      -> assertFailure "no results"
-    results -> go results expectedAnswers
+    results -> check results expectedAnswers
   where
-    go :: [(LispTerm ix, [Some (Neq LispTermF)])] -> [LispTerm ix] -> Assertion
-    go []               []    = return ()
-    go ((t, _):rs) (a:as)     = assertHEqual t a >> go rs as
-    go ((t, _):_)  []         = assertFailure $ "more results than answers, next result: " ++ hshow t
-    go _                (a:_) = assertFailure $ "no more results while expecting more answers, e.g.: " ++ hshow a
+    check :: [(LispTerm ix, [Some (Neq LispTermF)])] -> [LispTerm ix] -> Assertion
+    check []               []    = return ()
+    check ((t, _):rs) (a:as)     = assertHEqual t a >> check rs as
+    check ((t, _):_)  []         = assertFailure $ "more results than answers, next result: " ++ hshow t
+    check _                (a:_) = assertFailure $ "no more results while expecting more answers, e.g.: " ++ hshow a
 
 appendTest
   :: (TypeI (LispTermF LispTerm) ix)
@@ -148,6 +148,24 @@ appendTests = testGroup "append tests"
       , list [iAtom "x", iAtom "y"]
       , list [iAtom "z"]
       ]
+  , listTest
+      "append 2d, infer input"
+      1
+      (\q -> appendo
+               (ilist
+                 [ list ([iAtom "foo"] :: [LispTermF LispTerm Atom])
+                 , list [iAtom "bar", iAtom "baz"]
+                 ])
+               q
+               (ilist
+                 [ list [iAtom "foo"]
+                 , list [iAtom "bar", iAtom "baz"]
+                 , list [iAtom "x", iAtom "y"]
+                 , list [iAtom "z"]
+                 ]))
+      ([ilist [ list [iAtom "x", iAtom "y"]
+              , list [iAtom "z"]
+              ]] :: [LispTerm (List (List Atom))])
   ]
 
 -- heado :: LispTerm ix -> LispTerm ix -> Predicate LispTermF

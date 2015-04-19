@@ -55,8 +55,8 @@ instance (Unifiable f g, Unifiable f' g) => Unifiable (f :+: f') g where
   unify _       _       = const Nothing
 
 unifyTerms
-  :: (HFoldable h, Unifiable h h, HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h))))
-  => HFree h (LVar h) ix -> HFree h (LVar h) ix -> Subst h -> Maybe (Subst h)
+  :: (HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h))))
+  => Term h ix -> Term h ix -> Subst h -> Maybe (Subst h)
 unifyTerms (HPure x) y'@(HPure y) s
   | heq x y   = Just s
   | otherwise = Just $ S.extend x y' s
@@ -83,7 +83,9 @@ occursCheck var = getAny . go
 -- term in an environment. Sometimes the solution isn't canonical,
 -- so some ugly recursion happens. Happily we don't have to prove
 -- normalization.
-canonize :: forall h ix. (HFunctorId h, HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h)))) => Subst h -> Term h ix -> Term h ix
+canonize
+  :: forall h ix. (HFunctorId h, HOrdHet (Type (h (Term h))))
+  => Subst h -> Term h ix -> Term h ix
 canonize subst = go Set.empty
   where
     go :: Set (Some (LVar h)) -> Term h ix' -> Term h ix'
@@ -116,7 +118,7 @@ newtype Predicate h = Predicate { unPred :: State h -> Logic (State h) }
 -- make sure that the solution under which they unify is an
 -- extension of the solution set, ie we must add more facts
 -- to get a contradiction.
-checkNeqs :: forall h. (HFunctorId h, HFoldable h, Unifiable h h, HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h)))) => State h -> Logic (State h)
+checkNeqs :: forall h. (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h)))) => State h -> Logic (State h)
 checkNeqs s@State{..} = foldr go (return s) neq
   where
     go :: Some (Neq h) -> Logic (State h) -> Logic (State h)
@@ -129,14 +131,14 @@ checkNeqs s@State{..} = foldr go (return s) neq
 
 -- | Equating two terms will attempt to unify them and backtrack if
 -- this is impossible.
-(===) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h))))
+(===) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h))), HShow (h (Term h)))
       => Term h ix -> Term h ix -> Predicate h
 (===) l r = Predicate $ \s@State {..} ->
   case unifyTerms (canonize subst l) (canonize subst r) subst of
-    Just subst' -> checkNeqs s { subst = subst' }
+    Just subst' -> checkNeqs (s { subst = subst' })
     Nothing     -> mzero
 
-(===*) :: (HFunctorId h, HFoldable h, Unifiable h h, HEqHet (h (Term h)), HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h))))
+(===*) :: (HFunctorId h, HFoldable h, Unifiable h h, HEqHet (h (Term h)), HOrdHet (Type (h (Term h))), HShow (h (Term h)))
        => Term h ix -> Term h ix' -> Predicate h
 (===*) l r =
   case heqIx l r of
@@ -145,7 +147,7 @@ checkNeqs s@State{..} = foldr go (return s) neq
 
 -- | The opposite of unification. If any future unification would
 -- cause these two terms to become equal we'll backtrack.
-(=/=) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h))))
+(=/=) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h))))
       => Term h ix -> Term h ix -> Predicate h
 (=/=) l r = Predicate $ \s@State{..} -> checkNeqs s { neq = Some (Neq l r) : neq }
 
@@ -166,7 +168,8 @@ conj p1 p2 = Predicate $ \s -> unPred p1 s >>- unPred p2
 -- first predicate or the second.
 disconj :: (HFoldable h, Unifiable h h)
         => Predicate h -> Predicate h -> Predicate h
-disconj p1 p2 = Predicate $ \s -> unPred p1 s `interleave` unPred p2 s
+disconj p1 p2 = Predicate $ \s ->
+  unPred p1 s `interleave` unPred p2 s
 
 -- | The always failing predicate. This is mostly useful as
 -- a way of pruning out various conditions, as in

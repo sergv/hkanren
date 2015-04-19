@@ -115,7 +115,7 @@ data ListF :: (* -> *) -> (* -> *) where
   Nil  :: Type r ix -> ListF r (List ix)
   Cons :: Type r ix -> r ix -> r (List ix) -> ListF r (List ix)
 
-instance (HFoldable h, HOrd (Type (h (Term h))), HOrdHet (Type (h (Term h))), Unifiable h h) => Unifiable ListF h where
+instance (HFoldable h, HOrdHet (Type (h (Term h))), Unifiable h h) => Unifiable ListF h where
   unify (Nil _)       (Nil _)       = return
   unify (Cons _ x xs) (Cons _ y ys) =
     unifyTerms x y >=> unifyTerms xs ys

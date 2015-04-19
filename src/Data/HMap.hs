@@ -15,6 +15,7 @@
 {-# LANGUAGE KindSignatures      #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators       #-}
 
 module Data.HMap
   ( HMap
@@ -23,6 +24,7 @@ module Data.HMap
   , lookup
   , lookupWith
   , keys
+  , toList
   )
 where
 
@@ -34,6 +36,16 @@ import Prelude hiding (lookup)
 data HMap (k :: * -> *) (v :: * -> *) where
   HNil  :: HMap k v
   HNode :: k ix -> v ix -> HMap k v -> HMap k v -> HMap k v
+
+instance (HShow k, HShow v) => Show (HMap k v) where
+  showsPrec _ HNil = showString "HNil"
+  showsPrec n (HNode k v left right) =
+    showParen (n == 11) $
+    showString "HNode" . showString " " .
+    hshowsPrec 11 k . showString " " .
+    hshowsPrec 11 v . showString " " .
+    showsPrec 11 left . showString " " .
+    showsPrec 11 right
 
 empty :: HMap k v
 empty = HNil
@@ -80,3 +92,10 @@ keys m = go m []
     go :: HMap k v -> [Some k] -> [Some k]
     go HNil xs = xs
     go (HNode k _ left right) xs = go left $ Some k : go right xs
+
+toList :: forall k v. HMap k v -> [Some (k :*: v)]
+toList m = go m []
+  where
+    go :: HMap k v -> [Some (k :*: v)] -> [Some (k :*: v)]
+    go HNil xs = xs
+    go (HNode k v left right) xs = go left $ Some (k :*: v) : go right xs
