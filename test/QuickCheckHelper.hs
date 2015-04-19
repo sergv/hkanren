@@ -6,14 +6,12 @@
 {-# LANGUAGE GADTs                     #-}
 {-# LANGUAGE KindSignatures            #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
-{-# LANGUAGE PolyKinds                 #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeOperators             #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
 module QuickCheckHelper where
 
-import Control.Applicative
 import Control.Monad
 import Data.HOrdering
 import Data.HUtils
@@ -29,12 +27,6 @@ instance (ix ~ Atom) => TypeI (AtomF h) ix where
   data Type (AtomF h) idx where
     TAtom :: Type (AtomF h) Atom
   singType = TAtom
-
-instance TypeOpt (AtomF h) Atom where
-  singTypeOpt = Just singType
-
-instance TypeOpt (AtomF h) ix where
-  singTypeOpt = Nothing
 
 instance HEq (Type (AtomF h)) where
   heq TAtom TAtom = True
@@ -88,7 +80,7 @@ instance HShow (AtomF f) where
 
 data List ix
 
-type family IsList (ix :: k) :: Bool where
+type family IsList (ix :: *) :: Bool where
   IsList (List ix) = 'True
   IsList b         = 'False
 
@@ -97,12 +89,6 @@ instance (TypeI h ix', List ix' ~ ix) => TypeI (ListF h) ix where
   data Type (ListF h) idx where
     TList :: Type h ix' -> Type (ListF h) (List ix')
   singType = TList singType
-
-instance (TypeOpt h ix) => TypeOpt (ListF h) (List ix) where
-  singTypeOpt = TList <$> singTypeOpt
-
-instance TypeOpt ListF ix where
-  singTypeOpt = Nothing
 
 instance (HEq (Type h)) => HEq (Type (ListF h)) where
   heq (TList x) (TList y) = heq x y

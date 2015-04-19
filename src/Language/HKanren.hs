@@ -54,9 +54,7 @@ module Language.HKanren
   , mkLVar
   , Subst
   , TypeI(..)
-  , TypeOpt(..)
   , If
-  , Or
   , Equal
   )
 where
