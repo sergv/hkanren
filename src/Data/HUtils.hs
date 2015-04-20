@@ -21,6 +21,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
@@ -38,6 +39,9 @@ import Data.Traversable (Traversable)
 
 import Data.HOrdering
 import Data.Type.Equality
+
+import Text.PrettyPrint.Leijen.Text (Pretty, Doc)
+import qualified Text.PrettyPrint.Leijen.Text as PP
 
 newtype HFix (f :: (* -> *) -> (* -> *)) ix =
   HFix { unHFix :: f (HFix f) ix }
@@ -212,3 +216,23 @@ instance (HShow (f (HFree f a)), HShow a) => HShow (HFree f a) where
 instance (HShow h) => Show (Some h) where
   show (Some x)        = hshow x
   showsPrec n (Some x) = hshowsPrec n x
+
+
+
+class HPretty (h :: * -> *) where
+  hpretty :: h ix -> Doc
+
+instance (HPretty h) => Pretty (Some h) where
+  pretty (Some x) = hpretty x
+
+instance (HPretty (f r), HPretty (g r)) => HPretty ((:+:) f g r) where
+  hpretty (Inl x) = hpretty x
+  hpretty (Inr y) = hpretty y
+
+instance (HPretty f, HPretty g) => HPretty (f :*: g) where
+  hpretty (x :*: y) = hpretty x PP.<+> ":*:" PP.<+> hpretty y
+
+instance (HPretty (f (HFree f a)), HPretty a) => HPretty (HFree f a) where
+  hpretty (HPure x) = hpretty x
+  hpretty (HFree f) = hpretty f
+
