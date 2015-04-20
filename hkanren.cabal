@@ -21,9 +21,9 @@ library
                      , Data.HOrdering
                      , Data.HUtils
                      , Language.HKanren
-                     , Language.HKanren.Core
-  other-modules:       Language.HKanren.Subst
                      , Language.HKanren.Syntax
+  other-modules:       Language.HKanren.Core
+                     , Language.HKanren.Subst
   build-depends:       base >=4 && <5
                      , containers >=0.4
                      , logict

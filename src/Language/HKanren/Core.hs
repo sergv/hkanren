@@ -24,7 +24,7 @@ module Language.HKanren.Core
   , fresh
   , conj
   , disconj
-  , Predicate
+  , PrimPredicate
   , failure
   , success
   , run
@@ -110,7 +110,7 @@ data State h = State
   , neq        :: [Some (Neq h)]
   }
 
-newtype Predicate h = Predicate { unPred :: State h -> Logic (State h) }
+newtype PrimPredicate h = PrimPredicate { unPred :: State h -> Logic (State h) }
 
 -- | Validate the inqualities still hold.
 -- To do this we try to unify each pair under the current
@@ -132,61 +132,61 @@ checkNeqs s@State{..} = foldr go (return s) neq
 -- | Equating two terms will attempt to unify them and backtrack if
 -- this is impossible.
 (===) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h))), HShow (h (Term h)))
-      => Term h ix -> Term h ix -> Predicate h
-(===) l r = Predicate $ \s@State {..} ->
+      => Term h ix -> Term h ix -> PrimPredicate h
+(===) l r = PrimPredicate $ \s@State {..} ->
   case unifyTerms (canonize subst l) (canonize subst r) subst of
     Just subst' -> checkNeqs (s { subst = subst' })
     Nothing     -> mzero
 
 (===*) :: (HFunctorId h, HFoldable h, Unifiable h h, HEqHet (h (Term h)), HOrdHet (Type (h (Term h))), HShow (h (Term h)))
-       => Term h ix -> Term h ix' -> Predicate h
+       => Term h ix -> Term h ix' -> PrimPredicate h
 (===*) l r =
   case heqIx l r of
     Just Refl -> l === r
-    Nothing   -> Predicate $ \_ -> mzero
+    Nothing   -> PrimPredicate $ \_ -> mzero
 
 -- | The opposite of unification. If any future unification would
 -- cause these two terms to become equal we'll backtrack.
 (=/=) :: (HFunctorId h, HFoldable h, Unifiable h h, HOrdHet (Type (h (Term h))))
-      => Term h ix -> Term h ix -> Predicate h
-(=/=) l r = Predicate $ \s@State{..} -> checkNeqs s { neq = Some (Neq l r) : neq }
+      => Term h ix -> Term h ix -> PrimPredicate h
+(=/=) l r = PrimPredicate $ \s@State{..} -> checkNeqs s { neq = Some (Neq l r) : neq }
 
 -- | Generate a fresh (not rigid) term to use for our program.
 fresh :: (HFoldable h, Unifiable h h, TypeI (h (Term h)) ix)
-      => (Term h ix -> Predicate h) -> Predicate h
-fresh withTerm = Predicate $
+      => (Term h ix -> PrimPredicate h) -> PrimPredicate h
+fresh withTerm = PrimPredicate $
   \s@(State{freeVarIdx}) ->
     unPred (withTerm $ HPure $ mkLVar freeVarIdx) $ s { freeVarIdx = freeVarIdx + 1 }
 
 -- | Conjunction. This will return solutions that satsify both the
 -- first and second predicate.
 conj :: (HFoldable h, Unifiable h h)
-     => Predicate h -> Predicate h -> Predicate h
-conj p1 p2 = Predicate $ \s -> unPred p1 s >>- unPred p2
+     => PrimPredicate h -> PrimPredicate h -> PrimPredicate h
+conj p1 p2 = PrimPredicate $ \s -> unPred p1 s >>- unPred p2
 
 -- | Disjunction. This will return solutions that satisfy either the
 -- first predicate or the second.
 disconj :: (HFoldable h, Unifiable h h)
-        => Predicate h -> Predicate h -> Predicate h
-disconj p1 p2 = Predicate $ \s ->
+        => PrimPredicate h -> PrimPredicate h -> PrimPredicate h
+disconj p1 p2 = PrimPredicate $ \s ->
   unPred p1 s `interleave` unPred p2 s
 
 -- | The always failing predicate. This is mostly useful as
 -- a way of pruning out various conditions, as in
 -- @'conj' (a '===' b) 'failure'@. This is also an identity for
 -- 'disconj'.
-failure :: Predicate h
-failure = Predicate $ const mzero
+failure :: PrimPredicate h
+failure = PrimPredicate $ const mzero
 
 -- | The always passing predicate. This isn't very useful
 -- on it's own, but is helpful when building up new combinators. This
 -- is also an identity for 'conj'.
-success :: Predicate h
-success = Predicate return
+success :: PrimPredicate h
+success = PrimPredicate return
 
 -- | Run a program and find all solutions for the parametrized term.
 run :: forall h ix. (HFunctorId h, HFoldable h, Unifiable h h, TypeI (h (Term h)) ix, HOrdHet (Type (h (Term h))), HShow (h (Term h)))
-    => (Term h ix -> Predicate h) -> [(Term h ix, [Some (Neq h)])]
+    => (Term h ix -> PrimPredicate h) -> [(Term h ix, [Some (Neq h)])]
 run mkProg = catMaybes $ map answer $ observeAll prog
   where
     initVarIdx = 0

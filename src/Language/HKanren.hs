@@ -50,7 +50,6 @@
 
 module Language.HKanren
   ( module Language.HKanren.Core
-  , module Language.HKanren.Syntax
   , mkLVar
   , Subst
   , TypeI(..)
@@ -62,4 +61,3 @@ where
 
 import Language.HKanren.Core
 import Language.HKanren.Subst
-import Language.HKanren.Syntax

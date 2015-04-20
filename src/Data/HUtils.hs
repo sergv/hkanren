@@ -120,11 +120,6 @@ instance (HTraversable f, HTraversable g) => HTraversable ((:+:) f g) where
   htraverse f (Inl h)  = Inl <$> htraverse f h
   htraverse f (Inr h') = Inr <$> htraverse f h'
 
-
--- data Free f a =
---     Pure a
---   | Free (f (Free f a))
-
 data HFree (f :: (* -> *) -> (* -> *)) (a :: * -> *) ix =
     HPure (a ix)
   | HFree (f (HFree f a) ix)

@@ -1,39 +1,54 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RebindableSyntax    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
 
+{-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+
 module Main where
 
-import Control.Monad
+import Control.Monad (unless)
+import qualified Control.Monad as Monad
 import Data.HOrdering
 import Data.HUtils
-import Language.HKanren
+import Language.HKanren (TypeI, Neq, Term)
+import Language.HKanren.Syntax
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck hiding ((===))
 
 import LispLists
 
+import Data.String
+import Prelude hiding ((>>), (>>=))
+
+-- redefine the syntax
+(>>) :: Predicate LispTermF -> Predicate LispTermF -> Predicate LispTermF
+(>>) = conj
+
+(>>=) :: (TypeI (LispTermF LispTerm) ix)
+      => Fresh ix
+      -> (Term LispTermF ix -> Predicate LispTermF)
+      -> Predicate LispTermF
+(>>=) = fresh
+
 appendo
-  :: forall ix. (TypeI (LispTermF LispTerm) ix)
+  :: (TypeI (LispTermF LispTerm) ix)
   => LispTerm (List ix)
   -> LispTerm (List ix)
   -> LispTerm (List ix)
   -> Predicate LispTermF
 appendo l r o =
-  conde [ program [ l === inject Nil
-                  , o === r
-                  ]
-        , fresh $ \h ->
-            fresh $ \(t :: LispTerm (List ix)) ->
-              fresh $ \o' ->
-                 program [ inject (Cons h t)   === l
-                         , appendo t r o'
-                         , inject (Cons h o')  === o
-                         ]
-        ]
+  conde
+    (do l ==^ Nil
+        o === r)
+    (manyFresh $ \h t o' -> do
+       Cons h t  ^== l
+       appendo t r o'
+       Cons h o' ^== o)
 
 assertHEqual
   :: (HEq f, HEqHet f, HShow f)
@@ -60,7 +75,7 @@ listTest testName n query expectedAnswers =
   where
     check :: [(LispTerm ix, [Some (Neq LispTermF)])] -> [LispTerm ix] -> Assertion
     check []               []    = return ()
-    check ((t, _):rs) (a:as)     = assertHEqual t a >> check rs as
+    check ((t, _):rs) (a:as)     = assertHEqual t a Monad.>> check rs as
     check ((t, _):_)  []         = assertFailure $ "more results than answers, next result: " ++ hshow t
     check _                (a:_) = assertFailure $ "no more results while expecting more answers, e.g.: " ++ hshow a
 
@@ -93,12 +108,6 @@ appendTest' testName xs ys zs =
     (ilist xs)
     (ilist ys)
     (ilist zs)
-
--- atomType :: LispType Atom
--- atomType = HFix $ iTAtom
---
--- listOfAtomsType :: LispType (List Atom)
--- listOfAtomsType = HFix $ iTList $ atomType
 
 appendTests :: TestTree
 appendTests = testGroup "append tests"
