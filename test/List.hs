@@ -14,7 +14,6 @@ import Control.Monad (unless)
 import qualified Control.Monad as Monad
 import Data.HOrdering
 import Data.HUtils
-import Language.HKanren (TypeI, Neq, Term)
 import Language.HKanren.Syntax
 import Test.Tasty
 import Test.Tasty.HUnit

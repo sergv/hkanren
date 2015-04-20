@@ -29,6 +29,11 @@ module Language.HKanren.Syntax
   , manyFresh
 
   , Predicate
+
+  , TypeI
+  , Unifiable
+  , Term
+  , Neq
   )
 where
 
