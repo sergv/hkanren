@@ -21,7 +21,9 @@ library
                      , Data.HOrdering
                      , Data.HUtils
                      , Language.HKanren
+                     , Language.HKanren.Functions.List
                      , Language.HKanren.Syntax
+                     , Language.HKanren.Types.List
   other-modules:       Language.HKanren.Core
                      , Language.HKanren.Subst
   build-depends:       base >=4 && <5

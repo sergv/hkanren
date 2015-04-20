@@ -14,7 +14,9 @@ import Control.Monad (unless)
 import qualified Control.Monad as Monad
 import Data.HOrdering
 import Data.HUtils
+import Language.HKanren.Functions.List
 import Language.HKanren.Syntax
+import Language.HKanren.Types.List
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck hiding ((===))
@@ -33,21 +35,6 @@ import Prelude hiding ((>>), (>>=))
       -> (Term LispTermF ix -> Predicate LispTermF)
       -> Predicate LispTermF
 (>>=) = fresh
-
-appendo
-  :: (TypeI (LispTermF LispTerm) ix)
-  => LispTerm (List ix)
-  -> LispTerm (List ix)
-  -> LispTerm (List ix)
-  -> Predicate LispTermF
-appendo l r o =
-  conde
-    (do l ==^ Nil
-        o === r)
-    (manyFresh $ \h t o' -> do
-       Cons h t  ^== l
-       appendo t r o'
-       Cons h o' ^== o)
 
 assertHEqual
   :: (HEq f, HEqHet f, HShow f)
