@@ -218,7 +218,6 @@ instance (HShow h) => Show (Some h) where
   showsPrec n (Some x) = hshowsPrec n x
 
 
-
 class HPretty (h :: * -> *) where
   hpretty :: h ix -> Doc
 
@@ -235,4 +234,3 @@ instance (HPretty f, HPretty g) => HPretty (f :*: g) where
 instance (HPretty (f (HFree f a)), HPretty a) => HPretty (HFree f a) where
   hpretty (HPure x) = hpretty x
   hpretty (HFree f) = hpretty f
-

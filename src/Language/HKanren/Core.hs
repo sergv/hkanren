@@ -8,6 +8,7 @@
 {-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -39,6 +40,7 @@ import Data.Monoid
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Type.Equality
+import qualified Text.PrettyPrint.Leijen.Text as PP
 
 import Data.HOrdering
 import Data.HUtils
@@ -103,6 +105,12 @@ canonize subst = go Set.empty
 -- | Represents inequalities. @(l, r)@ means that @l@ will not unify
 -- with @r@ within the current environment.
 data Neq h ix = Neq (Term h ix) (Term h ix)
+
+instance (HShow (Term h)) => HShow (Neq h) where
+  hshowsPrec n (Neq x y) = \xs -> showParen (n == 11) (showString "Neq " . hshowsPrec 11 x . showString " " . hshowsPrec 11 y) xs
+
+instance (HPretty (Term h)) => HPretty (Neq h) where
+  hpretty (Neq x y) = hpretty x PP.<+> "≠" PP.<+> hpretty y
 
 data State h = State
   { subst      :: Subst h

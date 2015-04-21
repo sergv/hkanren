@@ -22,6 +22,7 @@
 {-# LANGUAGE InstanceSigs              #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE OverlappingInstances      #-}
+{-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE RankNTypes                #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
@@ -54,6 +55,7 @@ import Data.HUtils
 import Data.Singletons
 import Data.Singletons.Prelude.Bool
 import Data.Type.Equality
+import qualified Text.PrettyPrint.Leijen.Text as PP
 
 import Prelude hiding (lookup)
 
@@ -152,6 +154,9 @@ instance (HOrdHet (Type (h (Term h)))) => HOrdHet (LVar h) where
 
 instance HShow (LVar f) where
   hshowsPrec n (LVar m _) = \xs -> showParen (n == 11) (\ys -> "LVar " ++ show m ++ ys) xs
+
+instance HPretty (LVar f) where
+  hpretty (LVar m _) = PP.angles $ PP.integer m
 
 mkLVar :: (TypeI (h (Term h)) ix) => Integer -> LVar h ix
 mkLVar n = LVar n singType
