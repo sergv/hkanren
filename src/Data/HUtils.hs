@@ -11,9 +11,6 @@
 --
 ----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE DeriveFoldable             #-}
-{-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
@@ -33,12 +30,9 @@
 module Data.HUtils where
 
 import Control.Applicative
-import Data.Foldable (Foldable)
 import Data.Monoid
-import Data.Traversable (Traversable)
 
 import Data.HOrdering
-import Data.Type.Equality
 
 import Text.PrettyPrint.Leijen.Text (Pretty, Doc)
 import qualified Text.PrettyPrint.Leijen.Text as PP
@@ -56,14 +50,12 @@ hcata alg = alg . hfmap (hcata alg) . unHFix
 
 data (:*:) (f :: * -> *) (g :: * -> *) ix =
   f ix :*: g ix
-  deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 infixr 7 :*:
 
 data (:+:) (f :: (* -> *) -> (* -> *)) (g :: (* -> *) -> (* -> *)) (r :: * -> *) ix =
     Inl (f r ix)
   | Inr (g r ix)
-  deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 infixr 6 :+:
 
@@ -88,6 +80,10 @@ instance (HOrdHet (f r), HOrdHet (g r)) => HOrdHet ((:+:) f g r) where
   hcompareIx (Inr x) (Inr y) = hcompareIx x y
   hcompareIx (Inl _) (Inr _) = HLT
   hcompareIx (Inr _) (Inl _) = HGT
+
+instance (HShow (f r), HShow (g r)) => Show ((:+:) f g r ix) where
+  showsPrec n (Inl x) = showParen (n == 11) (showString "Inl " . hshowsPrec 11 x)
+  showsPrec n (Inr y) = showParen (n == 11) (showString "Inr " . hshowsPrec 11 y)
 
 type f :-> g = forall ix. f ix -> g ix
 type f :=> a = forall ix. f ix -> a
@@ -138,6 +134,22 @@ instance (HEqHet (f (HFree f a)), HEqHet a) => HEqHet (HFree f a) where
   heqIx (HFree x) (HFree y) = heqIx x y
   heqIx _         _         = Nothing
 
+instance (HOrd (f (HFree f a)), HOrd a) => HOrd (HFree f a) where
+  hcompare (HPure x) (HPure y) = hcompare x y
+  hcompare (HPure _) (HFree _) = LT
+  hcompare (HFree _) (HPure _) = GT
+  hcompare (HFree x) (HFree y) = hcompare x y
+
+instance (HOrdHet (f (HFree f a)), HOrdHet a) => HOrdHet (HFree f a) where
+  hcompareIx (HPure x) (HPure y) = hcompareIx x y
+  hcompareIx (HPure _) (HFree _) = HLT
+  hcompareIx (HFree _) (HPure _) = HGT
+  hcompareIx (HFree x) (HFree y) = hcompareIx x y
+
+instance (HShow (f (HFree f a)), HShow a) => Show (HFree f a ix) where
+  showsPrec n (HPure x) = showParen (n == 11) (showString "HPure " . hshowsPrec 11 x)
+  showsPrec n (HFree y) = showParen (n == 11) (showString "HPure " . hshowsPrec 11 y)
+
 newtype K a b = K a
   deriving (Show, Eq, Ord)
 
@@ -162,14 +174,16 @@ type HUnit = K ()
 data Some f = forall ix. Some (f ix)
 
 instance (HEq f, HEqHet f) => Eq (Some f) where
+  {-# INLINABLE (==) #-}
   Some x == Some y = x ==* y
 
 instance (HOrd f, HOrdHet f) => Ord (Some f) where
+  {-# INLINABLE compare #-}
   compare (Some x) (Some y) =
     case hcompareIx x y of
-      HLT      -> LT
-      HEQ Refl -> hcompare x y
-      HGT      -> GT
+      HLT -> LT
+      HEQ -> hcompare x y
+      HGT -> GT
 
 
 
@@ -181,12 +195,14 @@ instance f :<: f where
   inj  = id
   proj = Just
 
-instance {- # OVERLAPS #-} f :<: (f :+: g) where
+-- {- # OVERLAPS #-}
+instance  f :<: (f :+: g) where
   inj = Inl
   proj (Inl x) = Just x
   proj _       = Nothing
 
-instance {- # OVERLAPS #-} (f :<: g) => f :<: (h :+: g) where
+-- {- # OVERLAPS #-}
+instance  (f :<: g) => f :<: (h :+: g) where
   inj = Inr . inj
   proj (Inr x) = proj x
   proj _       = Nothing
@@ -202,16 +218,16 @@ class HShow (h :: * -> *) where
   hshowsPrec _ x = \xs -> hshow x ++ xs
 
 instance (HShow (f r), HShow (g r)) => HShow ((:+:) f g r) where
-  hshowsPrec n (Inl x) = \xs -> showParen (n == 11) (\ys -> "Inl " ++ hshowsPrec 11 x ys) xs
-  hshowsPrec n (Inr y) = \xs -> showParen (n == 11) (\ys -> "Inr " ++ hshowsPrec 11 y ys) xs
+  hshowsPrec n (Inl x) = showParen (n == 11) (showString "Inl " . hshowsPrec 11 x)
+  hshowsPrec n (Inr y) = showParen (n == 11) (showString "Inr " . hshowsPrec 11 y)
 
 instance (HShow f, HShow g) => HShow (f :*: g) where
   hshowsPrec n (x :*: y) =
     \xs -> showParen (n == 11) (\ys -> hshowsPrec 11 x (showString " :*: " (hshowsPrec 11 y ys))) xs
 
 instance (HShow (f (HFree f a)), HShow a) => HShow (HFree f a) where
-  hshowsPrec n (HPure x) = \xs -> showParen (n == 11) (\ys -> "HPure " ++ hshowsPrec 11 x ys) xs
-  hshowsPrec n (HFree f) = \xs -> showParen (n == 11) (\ys -> "HFree " ++ hshowsPrec 11 f ys) xs
+  hshowsPrec n (HPure x) = showParen (n == 11) (showString "HPure " . hshowsPrec 11 x)
+  hshowsPrec n (HFree f) = showParen (n == 11) (showString "HFree " . hshowsPrec 11 f)
 
 instance (HShow h) => Show (Some h) where
   show (Some x)        = hshow x

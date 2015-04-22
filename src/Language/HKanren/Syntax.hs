@@ -44,6 +44,7 @@ import Language.HKanren.Core (PrimPredicate, Unifiable, Term, Neq)
 import qualified Language.HKanren.Core as Core
 import Language.HKanren.Subst (TypeI, Type)
 
+{-# INLINABLE runN #-}
 -- | Only grab n solutions. Useful for when the full logic program
 -- might not terminate. Or takes its sweet time to do so.
 runN
@@ -59,6 +60,7 @@ runN
   -> [(Term h ix, [Some (Neq h)])]
 runN n = genericTake n . run
 
+{-# INLINABLE run #-}
 run
   :: Unifiable h h
   => HFoldable h
@@ -71,6 +73,7 @@ run
   -> [(Term h ix, [Some (Neq h)])]
 run f = Core.run (toPrimPredicate . f)
 
+{-# INLINABLE toPrimPredicate #-}
 toPrimPredicate
   :: Unifiable h h
   => HFoldable h

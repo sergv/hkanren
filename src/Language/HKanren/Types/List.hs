@@ -29,8 +29,9 @@
 module Language.HKanren.Types.List
   ( List
   , ListF(..)
+  , iNil
+  , iCons
   , list
-  , ilist
   , ReifyList(..)
   , reifyList
   )
@@ -76,14 +77,20 @@ instance (HOrd (Type h)) => HOrd (Type (ListF h)) where
 instance (HOrdHet (Type h)) => HOrdHet (Type (ListF h)) where
   hcompareIx (TList x) (TList y) =
     case hcompareIx x y of
-      HLT      -> HLT
-      HEQ Refl -> HEQ Refl
-      HGT      -> HGT
+      HLT -> HLT
+      HEQ -> HEQ
+      HGT -> HGT
 
 
 data ListF :: (* -> *) -> (* -> *) where
   Nil  :: (TypeI h ix) => ListF h (List ix)
   Cons :: (TypeI h ix) => h ix -> h (List ix) -> ListF h (List ix)
+
+iNil :: (TypeI (Term h) ix, ListF :<: h) => Term h (List ix)
+iNil = inject Nil
+
+iCons :: (TypeI (Term h) ix, ListF :<: h) => Term h ix -> Term h (List ix) -> Term h (List ix)
+iCons x xs = inject $ Cons x xs
 
 typeOfElems :: (TypeI h ix) => p h (List ix) -> Type h ix
 typeOfElems _ = singType
@@ -99,7 +106,7 @@ instance (HEq h) => HEq (ListF h) where
   heq (Cons x xs) (Cons y ys) = heq x y && heq xs ys
   heq _           _           = False
 
-instance (HEqHet (Type h)) => HEqHet (ListF h) where
+instance (HEq h, HEqHet (Type h)) => HEqHet (ListF h) where
   heqIx :: forall ix ix'. ListF h ix -> ListF h ix' -> Maybe (ix :~: ix')
   heqIx x@Nil        y@Nil =
     case heqIx (typeOfElems x) (typeOfElems y) of
@@ -124,27 +131,27 @@ instance (HOrd h) => HOrd (ListF h) where
   hcompare (Cons _ _)  Nil         = GT
   hcompare (Cons x xs) (Cons y ys) = hcompare x y <> hcompare xs ys
 
-instance (HOrdHet (Type h)) => HOrdHet (ListF h) where
+instance (HOrd h, HOrdHet (Type h)) => HOrdHet (ListF h) where
   hcompareIx x@Nil        y@Nil        =
     case hcompareIx (typeOfElems x) (typeOfElems y) of
-      HLT      -> HLT
-      HEQ Refl -> HEQ Refl
-      HGT      -> HGT
+      HLT -> HLT
+      HEQ -> HEQ
+      HGT -> HGT
   hcompareIx x@Nil        y@(Cons _ _) =
     case hcompareIx (typeOfElems x) (typeOfElems y) of
-      HLT      -> HLT
-      HEQ Refl -> HEQ Refl
-      HGT      -> HGT
+      HLT -> HLT
+      HEQ -> HEQ
+      HGT -> HGT
   hcompareIx x@(Cons _ _) y@Nil        =
     case hcompareIx (typeOfElems x) (typeOfElems y) of
-      HLT      -> HLT
-      HEQ Refl -> HEQ Refl
-      HGT      -> HGT
+      HLT -> HLT
+      HEQ -> HEQ
+      HGT -> HGT
   hcompareIx x@(Cons _ _) y@(Cons _ _) =
     case hcompareIx (typeOfElems x) (typeOfElems y) of
-      HLT      -> HLT
-      HEQ Refl -> HEQ Refl
-      HGT      -> HGT
+      HLT -> HLT
+      HEQ -> HEQ
+      HGT -> HGT
 
 instance HFunctorId ListF where
   hfmapId _ Nil         = Nil
@@ -168,11 +175,8 @@ instance (HPretty h) => HPretty (ListF h) where
   hpretty (Cons x xs) = hpretty x <+> "::" <+> hpretty xs
 
 
-list :: (ListF :<: h, TypeI (h (Term h)) ix) => [h (Term h) ix] -> h (Term h) (List ix)
-list = foldr (\x y -> inj $ Cons (HFree x) (HFree y)) (inj Nil)
-
-ilist :: (ListF :<: h, TypeI (h (Term h)) ix) => [h (Term h) ix] -> Term h (List ix)
-ilist = HFree . list
+list :: (ListF :<: h, TypeI (Term h) ix) => [Term h ix] -> Term h (List ix)
+list = foldr (\x y -> iCons x y) iNil
 
 type family CanReifyList h f where
   CanReifyList (ListF f) f     = 'True

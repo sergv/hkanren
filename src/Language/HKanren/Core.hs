@@ -110,7 +110,7 @@ instance (HShow (Term h)) => HShow (Neq h) where
   hshowsPrec n (Neq x y) = \xs -> showParen (n == 11) (showString "Neq " . hshowsPrec 11 x . showString " " . hshowsPrec 11 y) xs
 
 instance (HPretty (Term h)) => HPretty (Neq h) where
-  hpretty (Neq x y) = hpretty x PP.<+> "≠" PP.<+> hpretty y
+  hpretty (Neq x y) = hpretty x PP.<+> "=/=" PP.<+> hpretty y
 
 data State h = State
   { subst      :: Subst h

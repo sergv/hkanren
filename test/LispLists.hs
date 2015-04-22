@@ -17,9 +17,11 @@ module LispLists where
 import Data.HOrdering
 import Data.HUtils
 import Data.Monoid
+import qualified Data.Text.Lazy as T
 import Data.Type.Equality
 import Language.HKanren
 import Language.HKanren.Types.List
+import qualified Text.PrettyPrint.Leijen.Text as PP
 -- import Test.QuickCheck hiding ((===), Success, Failure)
 
 data Atom
@@ -40,14 +42,14 @@ instance HOrd (Type (AtomF h)) where
   hcompare TAtom TAtom = EQ
 
 instance HOrdHet (Type (AtomF h)) where
-  hcompareIx TAtom TAtom = HEQ Refl
+  hcompareIx TAtom TAtom = HEQ
 
 
 data AtomF :: (* -> *) -> (* -> *) where
   Atom :: String -> AtomF r Atom
 
-iAtom :: (AtomF :<: h) => String -> h r Atom
-iAtom = inj . Atom
+iAtom :: (AtomF :<: h) => String -> Term h Atom
+iAtom = inject . Atom
 
 instance (AtomF :<: h) => Unifiable AtomF h where
   unify (Atom x) (Atom y) s
@@ -64,7 +66,7 @@ instance HOrd (AtomF f) where
   hcompare (Atom x) (Atom y) = compare x y
 
 instance HOrdHet (AtomF f) where
-  hcompareIx (Atom _) (Atom _) = HEQ Refl
+  hcompareIx (Atom _) (Atom _) = HEQ
 
 
 instance HFunctorId AtomF where
@@ -78,6 +80,9 @@ instance HFoldable AtomF where
 
 instance HShow (AtomF f) where
   hshowsPrec n (Atom str) = \xs -> showParen (n == 11) (\ys -> "Atom " ++ show str ++ ys) xs
+
+instance HPretty (AtomF f) where
+  hpretty (Atom str) = PP.text $ T.pack str
 
 type LispTermF = ListF :+: AtomF
 type LispTerm = Term LispTermF
@@ -111,13 +116,13 @@ type LispTerm = Term LispTermF
 -- instance (HOrdHet f) => HOrdHet (PairF f) where
 --   hcompareIx (Pair x y) (Pair x' y') =
 --     case hcompareIx x x' of
---       HLT      -> HLT
---       HEQ Refl ->
+--       HLT -> HLT
+--       HEQ ->
 --         case hcompareIx y y' of
---           HLT      -> HLT
---           HEQ Refl -> HEQ Refl
---           HGT      -> HGT
---       HGT      -> HGT
+--           HLT -> HLT
+--           HEQ -> HEQ
+--           HGT -> HGT
+--       HGT -> HGT
 --
 -- instance HFunctor PairF where
 --   hfmap f (Pair x y) = Pair (f x) (f y)
