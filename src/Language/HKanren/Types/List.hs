@@ -47,7 +47,7 @@ import Data.Type.Equality
 import Text.PrettyPrint.Leijen.Text ((<+>))
 
 import Language.HKanren.Core (Unifiable(..), unifyTerms)
-import Language.HKanren.Subst (Term, TypeI(..))
+import Language.HKanren.Subst (Term, Term1, LVar, LFunctor, TypeI(..))
 
 
 data List ix
@@ -86,16 +86,16 @@ data ListF :: (* -> *) -> (* -> *) where
   Nil  :: (TypeI h ix) => ListF h (List ix)
   Cons :: (TypeI h ix) => h ix -> h (List ix) -> ListF h (List ix)
 
-iNil :: (TypeI (Term h) ix, ListF :<: h) => Term h (List ix)
+iNil :: (TypeI (Term k) ix, ListF :<: LFunctor k, LVar k) => Term k (List ix)
 iNil = inject Nil
 
-iCons :: (TypeI (Term h) ix, ListF :<: h) => Term h ix -> Term h (List ix) -> Term h (List ix)
+iCons :: (TypeI (Term k) ix, ListF :<: LFunctor k, LVar k) => Term k ix -> Term k (List ix) -> Term k (List ix)
 iCons x xs = inject $ Cons x xs
 
 typeOfElems :: (TypeI h ix) => p h (List ix) -> Type h ix
 typeOfElems _ = singType
 
-instance (HFoldable h, HOrdHet (Type (h (Term h))), Unifiable h h) => Unifiable ListF h where
+instance (HFoldable (LFunctor k), HOrdHet (Type (Term1 k)), LVar k, Unifiable (LFunctor k) k) => Unifiable ListF k where
   unify Nil         Nil         = return
   unify (Cons x xs) (Cons y ys) =
     unifyTerms x y >=> unifyTerms xs ys
@@ -131,7 +131,7 @@ instance (HOrd h) => HOrd (ListF h) where
   hcompare (Cons _ _)  Nil         = GT
   hcompare (Cons x xs) (Cons y ys) = hcompare x y <> hcompare xs ys
 
-instance (HOrd h, HOrdHet (Type h)) => HOrdHet (ListF h) where
+instance (HEq h, HOrd h, HOrdHet (Type h)) => HOrdHet (ListF h) where
   hcompareIx x@Nil        y@Nil        =
     case hcompareIx (typeOfElems x) (typeOfElems y) of
       HLT -> HLT
@@ -175,14 +175,14 @@ instance (HPretty h) => HPretty (ListF h) where
   hpretty (Cons x xs) = hpretty x <+> "::" <+> hpretty xs
 
 
-list :: (ListF :<: h, TypeI (Term h) ix) => [Term h ix] -> Term h (List ix)
+list :: (ListF :<: LFunctor k, TypeI (Term k) ix, LVar k) => [Term k ix] -> Term k (List ix)
 list = foldr (\x y -> iCons x y) iNil
 
 type family CanReifyList h f where
-  CanReifyList (ListF f) f     = 'True
+  CanReifyList (ListF f)     f = 'True
   CanReifyList ((:+:) f g r) h = CanReifyList (f r) h :|| CanReifyList (g r) h
-  CanReifyList (HFree f a) h   = CanReifyList (f (HFree f a)) h
-  CanReifyList a b             = 'False
+  CanReifyList (HFree f a)   h = CanReifyList (f (HFree f a)) h
+  CanReifyList a             b = 'False
 
 class ReifyList (h :: * -> *) (f :: * -> *) where
   reifyList' :: h (List ix) -> [f ix]

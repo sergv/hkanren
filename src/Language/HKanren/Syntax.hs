@@ -13,7 +13,7 @@ module Language.HKanren.Syntax
   ( conde
   , conj
   , disj
-  , fresh
+  , withFresh
   , Fresh(..)
   , success
   , failure
@@ -26,7 +26,8 @@ module Language.HKanren.Syntax
   , (===*)
   , (=/=)
 
-  , manyFresh
+  , fresh
+  , V(..)
 
   , Predicate
 
@@ -40,49 +41,52 @@ where
 import Data.HOrdering
 import Data.HUtils
 import Data.List
-import Language.HKanren.Core (PrimPredicate, Unifiable, Term, Neq)
+import Language.HKanren.Core (PrimPredicate, Unifiable, Term, Term1, LFunctor, Neq, LVar, LDomain)
 import qualified Language.HKanren.Core as Core
 import Language.HKanren.Subst (TypeI, Type)
 
-{-# INLINABLE runN #-}
 -- | Only grab n solutions. Useful for when the full logic program
 -- might not terminate. Or takes its sweet time to do so.
 runN
-  :: Unifiable h h
-  => HFoldable h
-  => HFunctorId h
-  => HOrdHet (Type (h (Term h)))
-  => HOrdHet (h (Term h))
-  => HShow (h (Term h))
-  => TypeI (h (Term h)) ix
+  :: Unifiable (LFunctor k) k
+  => HFoldable (LFunctor k)
+  => HFunctorId (LFunctor k)
+  => HOrdHet (Type (Term1 k))
+  => HOrdHet (Term1 k)
+  => HShow (Term1 k)
+  => TypeI (Term1 k) ix
+  => Ord (LDomain k)
+  => LVar k
   => Integer
-  -> (Term h ix -> Predicate h)
-  -> [(Term h ix, [Some (Neq h)])]
+  -> (Term k ix -> Predicate k)
+  -> [(Term k ix, [Some (Neq k)])]
 runN n = genericTake n . run
 
-{-# INLINABLE run #-}
 run
-  :: Unifiable h h
-  => HFoldable h
-  => HFunctorId h
-  => HOrdHet (Type (h (Term h)))
-  => HOrdHet (h (Term h))
-  => HShow (h (Term h))
-  => TypeI (h (Term h)) ix
-  => (Term h ix -> Predicate h)
-  -> [(Term h ix, [Some (Neq h)])]
+  :: Unifiable (LFunctor k) k
+  => HFoldable (LFunctor k)
+  => HFunctorId (LFunctor k)
+  => HOrdHet (Type (Term1 k))
+  => HOrdHet (Term1 k)
+  => HShow (Term1 k)
+  => TypeI (Term1 k) ix
+  => Ord (LDomain k)
+  => LVar k
+  => (Term k ix -> Predicate k)
+  -> [(Term k ix, [Some (Neq k)])]
 run f = Core.run (toPrimPredicate . f)
 
-{-# INLINABLE toPrimPredicate #-}
 toPrimPredicate
-  :: Unifiable h h
-  => HFoldable h
-  => HFunctorId h
-  => HOrdHet (Type (h (Term h)))
-  => HOrdHet (h (Term h))
-  => HShow (h (Term h))
-  => Predicate h
-  -> PrimPredicate h
+  :: Unifiable (LFunctor k) k
+  => HFoldable (LFunctor k)
+  => HFunctorId (LFunctor k)
+  => HOrdHet (Type (Term1 k))
+  => HOrdHet (Term1 k)
+  => HShow (Term1 k)
+  => Ord (LDomain k)
+  => LVar k
+  => Predicate k
+  -> PrimPredicate k
 toPrimPredicate Success                   = Core.success
 toPrimPredicate Failure                   = Core.failure
 toPrimPredicate (Combine Conjunction x y) = Core.conj (toPrimPredicate x) (toPrimPredicate y)
@@ -93,98 +97,138 @@ toPrimPredicate (x :===* y)               = x Core.===* y
 toPrimPredicate (x :=/= y)                = x Core.=/= y
 
 
+data CombType = Conjunction | Disjunction
+  deriving (Show, Eq, Ord, Enum, Bounded)
+
+data Predicate k where
+  Success   :: Predicate k
+  Failure   :: Predicate k
+  Combine   :: CombType -> Predicate k -> Predicate k -> Predicate k
+  WithFresh :: (TypeI (Term1 k) ix) => (Term k ix -> Predicate k) -> Predicate k
+  (:===)    :: (TypeI (Term1 k) ix) => Term k ix  -> Term k ix -> Predicate k
+  (:=/=)    :: Term k ix -> Term k ix -> Predicate k
+  -- this operator is very fishy
+  (:===*)   :: Term k ix -> Term k ix' -> Predicate k
+
+(===) :: (TypeI (Term1 k) ix) => Term k ix -> Term k ix -> Predicate k
+(===) = (:===)
+
+(===*) :: Term k ix -> Term k ix' -> Predicate k
+(===*) = (:===*)
+
+(=/=) :: Term k ix -> Term k ix -> Predicate k
+(=/=) = (:=/=)
+
+(^==) :: (TypeI (Term1 k) ix, f :<: LFunctor k)
+      => f (Term k) ix -> Term k ix -> Predicate k
+(^==) l r =  inject l === r
+
+(==^) :: (TypeI (Term1 k) ix, f :<: LFunctor k)
+      => Term k ix -> f (Term k) ix -> Predicate k
+(==^) l r =  l === inject r
+
+(^=^) :: (TypeI (Term1 k) ix, f :<: LFunctor k)
+      => f (Term k) ix -> f (Term k) ix -> Predicate k
+(^=^) l r =  inject l === inject r
+
+
+success :: Predicate k
+success = Success
+
+failure :: Predicate k
+failure = Failure
+
+conj :: Predicate k -> Predicate k -> Predicate k
+conj = Combine Conjunction
+
+disj :: Predicate k -> Predicate k -> Predicate k
+disj = Combine Disjunction
+
+
 -- | We often want to introduce many fresh variables at once. We've
 -- encoded this in DSKanren with the usual type class hackery for
 -- variadic functions.
 class MkFresh a where
-  type MkFreshFunctor a :: (* -> *) -> (* -> *)
+  type MkFreshVar a :: (* -> *)
   -- | Instantiate @a@ with as many fresh terms as needed to produce a
   -- predicate.
-  manyFresh :: a -> Predicate (MkFreshFunctor a)
+  fresh :: a -> Predicate (MkFreshVar a)
 
-instance (MkFresh a, MkFreshFunctor a ~ h, TypeI (h (Term h)) ix) => MkFresh (Term h ix -> a) where
-  type MkFreshFunctor (Term h ix -> a) = h
-  manyFresh = WithFresh . fmap manyFresh
+-- ^ V for Variable. Wrapper for MkFresh
+newtype V k ix = V { unT :: Term k ix }
 
-instance MkFresh (Predicate h) where
-  type MkFreshFunctor (Predicate h) = h
-  manyFresh = id
+instance (MkFresh a, MkFreshVar a ~ k, TypeI (Term1 k) ix, f ~ LFunctor k) => MkFresh (HFree f k ix -> a) where
+  type MkFreshVar (HFree f k ix -> a) = k
+  fresh f = WithFresh $ fresh . f
 
-
-data CombType = Conjunction | Disjunction
-  deriving (Show, Eq, Ord, Enum, Bounded)
-
--- data SCombType (c :: CombType) where
---   SConjunction :: SCombType Conjunction
---   SDisjunction :: SCombType Disjunction
-
-data Predicate h where
-  Success   :: Predicate h
-  Failure   :: Predicate h
-  Combine   :: CombType -> Predicate h -> Predicate h -> Predicate h
-  WithFresh :: (TypeI (h (Term h)) ix) => (Term h ix -> Predicate h) -> Predicate h
-  (:===)    :: (TypeI (h (Term h)) ix) => Term h ix  -> Term h ix -> Predicate h
-  (:=/=)    :: Term h ix -> Term h ix -> Predicate h
- -- this operator is very fishy
-  (:===*)   :: Term h ix -> Term h ix' -> Predicate h
-
-(===) :: (TypeI (h (Term h)) ix) => Term h ix -> Term h ix -> Predicate h
-(===) = (:===)
-
-(===*) :: Term h ix -> Term h ix' -> Predicate h
-(===*) = (:===*)
-
-(=/=) :: Term h ix -> Term h ix -> Predicate h
-(=/=) = (:=/=)
-
-(^==) :: (TypeI (h (Term h)) ix, f :<: h)
-      => f (Term h) ix -> Term h ix -> Predicate h
-(^==) l r =  inject l === r
-
-(==^) :: (TypeI (h (Term h)) ix, f :<: h)
-      => Term h ix -> f (Term h) ix -> Predicate h
-(==^) l r =  l === inject r
-
-(^=^) :: (TypeI (h (Term h)) ix, f :<: h)
-      => f (Term h) ix -> f (Term h) ix -> Predicate h
-(^=^) l r =  inject l === inject r
+instance MkFresh (Predicate k) where
+  type MkFreshVar (Predicate k) = k
+  fresh = id
 
 
-success :: Predicate h
-success = Success
+-- data Fresh (ix :: k) = Fresh
+--
+-- fresh :: (TypeI (Term1 k) ix) => Fresh ix -> (Term k ix -> Predicate k) -> Predicate k
+-- fresh Fresh = WithFresh
 
-failure :: Predicate h
-failure = Failure
+data Fresh k ix where
+  Fresh  :: (TypeI (Term1 k) ix)
+         => Fresh k (Term k ix)
+  Fresh2 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix')
+         => Fresh k (Term k ix, Term k ix')
+  Fresh3 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'')
+         => Fresh k (Term k ix, Term k ix', Term k ix'')
+  Fresh4 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'', TypeI (Term1 k) ix''')
+         => Fresh k (Term k ix, Term k ix', Term k ix'', Term k ix''')
+  Fresh5 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'', TypeI (Term1 k) ix''', TypeI (Term1 k) ix'''')
+         => Fresh k (Term k ix, Term k ix', Term k ix'', Term k ix''', Term k ix'''')
+  Fresh6 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'', TypeI (Term1 k) ix''', TypeI (Term1 k) ix'''', TypeI (Term1 k) ix''''')
+         => Fresh k (Term k ix, Term k ix', Term k ix'', Term k ix''', Term k ix'''', Term k ix''''')
+  Fresh7 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'', TypeI (Term1 k) ix''', TypeI (Term1 k) ix'''', TypeI (Term1 k) ix''''', TypeI (Term1 k) ix'''''')
+         => Fresh k (Term k ix, Term k ix', Term k ix'', Term k ix''', Term k ix'''', Term k ix''''', Term k ix'''''')
 
-conj :: Predicate h -> Predicate h -> Predicate h
-conj = Combine Conjunction
-
-disj :: Predicate h -> Predicate h -> Predicate h
-disj = Combine Disjunction
-
-
-data Fresh ix = Fresh
-
-fresh :: (TypeI (h (Term h)) ix) => Fresh ix -> (Term h ix -> Predicate h) -> Predicate h
-fresh Fresh = WithFresh
+withFresh :: Fresh k a -> (a -> Predicate k) -> Predicate k
+withFresh Fresh  f = WithFresh f
+withFresh Fresh2 f = WithFresh $ \x ->
+                       WithFresh $ \y -> f (x, y)
+withFresh Fresh3 f = WithFresh $ \x ->
+                       WithFresh $ \y ->
+                         WithFresh $ \z -> f (x, y, z)
+withFresh Fresh4 f = WithFresh $ \x ->
+                       WithFresh $ \y ->
+                         WithFresh $ \z ->
+                           WithFresh $ \w -> f (x, y, z, w)
+withFresh Fresh5 f = WithFresh $ \x ->
+                       WithFresh $ \y ->
+                         WithFresh $ \z ->
+                           WithFresh $ \w ->
+                             WithFresh $ \t -> f (x, y, z, w, t)
+withFresh Fresh6 f = WithFresh $ \x ->
+                       WithFresh $ \y ->
+                         WithFresh $ \z ->
+                           WithFresh $ \w ->
+                             WithFresh $ \t ->
+                               WithFresh $ \u -> f (x, y, z, w, t, u)
+withFresh Fresh7 f = WithFresh $ \x ->
+                       WithFresh $ \y ->
+                         WithFresh $ \z ->
+                           WithFresh $ \w ->
+                             WithFresh $ \t ->
+                               WithFresh $ \u ->
+                                 WithFresh $ \v -> f (x, y, z, w, t, u, v)
 
 
 class Conde a where
-  type CondeFunctor a :: (* -> *) -> (* -> *)
-  -- | Instantiate @a@ with as many fresh terms as needed to produce a
-  -- predicate.
-  -- disj :: a
-  condeImpl :: [Predicate (CondeFunctor a)] -> a
+  type CondeVar a :: (* -> *)
+  condeImpl :: [Predicate (CondeVar a)] -> a
 
-instance Conde (Predicate h) where
-  type CondeFunctor (Predicate h) = h
-  -- disj = Core.failure
+instance Conde (Predicate k) where
+  type CondeVar (Predicate k) = k
   condeImpl [] = Failure
   condeImpl xs = foldr1 (Combine Disjunction) $ reverse xs
 
-instance (Conde a, CondeFunctor a ~ h) => Conde (Predicate h -> a) where
-  type CondeFunctor (Predicate h -> a) = h
-  -- disj pred = Core.disconj pred (disj :: a)
+instance (Conde a, CondeVar a ~ k) => Conde (Predicate k -> a) where
+  type CondeVar (Predicate k -> a) = k
   condeImpl xs x = condeImpl (x : xs)
 
 conde :: (Conde a) => a

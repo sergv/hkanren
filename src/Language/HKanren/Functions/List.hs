@@ -33,50 +33,50 @@ where
 import Data.HUtils
 import Language.HKanren.Syntax
 import Language.HKanren.Types.List
+import Language.HKanren.Subst (Term1, LFunctor)
 
 import Prelude (return, ($))
 
 -- redefine the syntax
-(>>) :: Predicate h -> Predicate h -> Predicate h
+(>>) :: Predicate k -> Predicate k -> Predicate k
 (>>) = conj
 
--- (>>=) :: (TypeI (h (Term h)) ix)
---       => Fresh ix
---       -> (Term h ix -> Predicate h)
---       -> Predicate h
--- (>>=) = fresh
+-- (>>=) :: Fresh k a
+--       -> (a -> Predicate k)
+--       -> Predicate k
+-- (>>=) = withFresh
 
 appendo
-  :: (ListF :<: h, TypeI (h (Term h)) (List ix), TypeI (h (Term h)) ix)
-  => Term h (List ix)
-  -> Term h (List ix)
-  -> Term h (List ix)
-  -> Predicate h
+  :: (ListF :<: LFunctor k, TypeI (Term1 k) (List ix), TypeI (Term1 k) ix)
+  => Term k (List ix)
+  -> Term k (List ix)
+  -> Term k (List ix)
+  -> Predicate k
 appendo l r o =
   conde
     (do l ==^ Nil
         o === r)
-    (manyFresh $ \h t o' -> do
-       Cons h t  ^== l
-       appendo t r o'
-       Cons h o' ^== o)
+    (fresh $ \h t o' -> do
+      Cons h t  ^== l
+      appendo t r o'
+      Cons h o' ^== o)
 
 allUnique
-  :: forall h ix. (ListF :<: h, TypeI (h (Term h)) ix, TypeI (h (Term h)) (List ix))
-  => Term h (List ix) -> Predicate h
+  :: forall k ix. (ListF :<: LFunctor k, TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
+  => Term k (List ix) -> Predicate k
 allUnique args =
   conde
     (args ==^ Nil)
-    (manyFresh $ \x xs -> do
+    (fresh $ \x xs -> do
       args ==^ Cons x xs
       notMember x xs
       allUnique xs)
 
 member
-  :: forall h ix. (ListF :<: h, TypeI (h (Term h)) ix, TypeI (h (Term h)) (List ix))
-  => Term h ix -> Term h (List ix) -> Predicate h
+  :: forall k ix. (ListF :<: LFunctor k, TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
+  => Term k ix -> Term k (List ix) -> Predicate k
 member x xs =
-  (manyFresh $ \y ys -> do
+  (fresh $ \y ys -> do
     xs ==^ Cons y ys
     conde
       (x === y)
@@ -84,39 +84,39 @@ member x xs =
           member x ys))
 
 notMember
-  :: forall h ix. (ListF :<: h, TypeI (h (Term h)) ix, TypeI (h (Term h)) (List ix))
-  => Term h ix -> Term h (List ix) -> Predicate h
+  :: forall k ix. (ListF :<: LFunctor k, TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
+  => Term k ix -> Term k (List ix) -> Predicate k
 notMember x xs =
   conde
     (xs ==^ Nil)
-    (manyFresh $ \y ys -> do
+    (fresh $ \y ys -> do
       xs ==^ Cons y ys
       x =/= y
       notMember x ys)
 
 allo
-  :: forall h ix. (ListF :<: h, TypeI (h (Term h)) ix, TypeI (h (Term h)) (List ix))
-  => (Term h ix -> Predicate h) -> Term h (List ix) -> Predicate h
+  :: forall k ix. (ListF :<: LFunctor k, TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
+  => (Term k ix -> Predicate k) -> Term k (List ix) -> Predicate k
 allo p xs =
   conde
     (xs ==^ Nil)
-    (manyFresh $ \y ys -> do
+    (fresh $ \y ys -> do
       xs ==^ Cons y ys
       p y
       allo p ys)
 
 foldlo
-  :: forall h acc ix. (ListF :<: h, TypeI (h (Term h)) acc, TypeI (h (Term h)) ix, TypeI (h (Term h)) (List ix))
-  => (Term h acc -> Term h ix -> Term h acc -> Predicate h)
-  -> Term h acc
-  -> Term h (List ix)
-  -> Term h acc
-  -> Predicate h
+  :: forall k acc ix. (ListF :<: LFunctor k, TypeI (Term1 k) acc, TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
+  => (Term k acc -> Term k ix -> Term k acc -> Predicate k)
+  -> Term k acc
+  -> Term k (List ix)
+  -> Term k acc
+  -> Predicate k
 foldlo f acc xs out =
   conde
     (do xs  ==^ Nil
         acc === out)
-    (manyFresh $ \y ys out' -> do
+    (fresh $ \y ys out' -> do
       xs ==^ Cons y ys
       f acc y out'
       foldlo f out' ys out)

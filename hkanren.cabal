@@ -17,14 +17,17 @@ source-repository head
   location: https://github.com/sergv/hkanren.git
 
 library
-  exposed-modules:     Data.HMap
-                     , Data.HOrdering
+  exposed-modules:     Data.HOrdering
                      , Data.HUtils
                      , Language.HKanren
                      , Language.HKanren.Functions.List
+                     , Language.HKanren.SafeLVar
                      , Language.HKanren.Syntax
                      , Language.HKanren.Types.List
-  other-modules:       Language.HKanren.Core
+  other-modules:       Data.HMap
+                     , Language.HKanren.Core
+                     , Language.HKanren.LVar
+                     , Language.HKanren.Type
                      , Language.HKanren.Subst
   build-depends:       base >=4 && <5
                      , containers >=0.4
@@ -38,6 +41,7 @@ library
                        -fno-warn-type-defaults
                        -fno-warn-name-shadowing
                        -ferror-spans -rtsopts
+  ghc-prof-options:    -fprof-auto
 
 -- executable           playground
 --   build-depends:     base >= 4.7, containers, logict, hkanren
@@ -49,6 +53,7 @@ library
 --                      -fno-warn-name-shadowing
 --                      -ferror-spans -rtsopts
 --                      -main-is Language.HKanren.Playground
+--  ghc-prof-options:  -fprof-auto
 
 executable           singletons-playground
   build-depends:     base >= 4.7, containers, singletons
@@ -60,6 +65,7 @@ executable           singletons-playground
                      -fno-warn-name-shadowing
                      -ferror-spans -rtsopts
                      -main-is Language.HKanren.SingletonsPlayground
+  ghc-prof-options:  -fprof-auto
 
 -- test-suite test-unify
 --   hs-source-dirs: test
@@ -94,3 +100,4 @@ test-suite test-list
                       -fno-warn-type-defaults
                       -fno-warn-name-shadowing
                       -ferror-spans -rtsopts
+  ghc-prof-options:   -fprof-auto

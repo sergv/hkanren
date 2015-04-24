@@ -18,6 +18,7 @@ import Data.HUtils
 import Data.Monoid
 import qualified Data.Text.Lazy as T
 import Language.HKanren.Functions.List
+import qualified Language.HKanren.SafeLVar as Safe
 import Language.HKanren.Syntax
 import Language.HKanren.Types.List
 import Text.PrettyPrint.Leijen.Text (Pretty(..), displayT, renderPretty)
@@ -34,14 +35,13 @@ import Data.String
 import Prelude hiding ((>>), (>>=))
 
 -- redefine the syntax
-(>>) :: Predicate LispTermF -> Predicate LispTermF -> Predicate LispTermF
+(>>) :: Predicate LispVar -> Predicate LispVar -> Predicate LispVar
 (>>) = conj
 
-(>>=) :: (TypeI (LispTermF LispTerm) ix)
-      => Fresh ix
-      -> (Term LispTermF ix -> Predicate LispTermF)
-      -> Predicate LispTermF
-(>>=) = fresh
+(>>=) :: Fresh LispVar a
+      -> (a -> Predicate LispVar)
+      -> Predicate LispVar
+(>>=) = withFresh
 
 assertHEqual
   :: (HEq f, HEqHet f, HShow f)
@@ -57,7 +57,7 @@ assertHEqual prefix actual expected =
 failingListTest
   :: forall ix. (TypeI (LispTermF LispTerm) ix)
   => String
-  -> (LispTerm ix -> Predicate LispTermF)
+  -> (LispTerm ix -> Predicate LispVar)
   -> TestTree
 failingListTest testName query =
   testCase testName $
@@ -69,7 +69,7 @@ listTest
   :: forall ix. (TypeI (LispTermF LispTerm) ix)
   => String
   -> Integer
-  -> (LispTerm ix -> Predicate LispTermF)
+  -> (LispTerm ix -> Predicate LispVar)
   -> [LispTerm ix]
   -> TestTree
 listTest testName n query expectedAnswers =
@@ -78,17 +78,17 @@ listTest testName n query expectedAnswers =
     []      -> assertFailure "no results"
     results -> checkSorted results expectedAnswers
 
-checkSorted :: [(LispTerm ix, [Some (Neq LispTermF)])] -> [LispTerm ix] -> Assertion
+checkSorted :: [(LispTerm ix, [Some (Neq LispVar)])] -> [LispTerm ix] -> Assertion
 checkSorted results expectedAnswers = do
   unless (resultsCount == expectedAnswersCount) $
-    assertFailure $ "expected " ++ show  expectedAnswersCount ++ " results but got " ++ show resultsCount
+    assertFailure $ "expected " ++ show expectedAnswersCount ++ " results but got " ++ show resultsCount
   check (sortBy (comparing (Some . fst)) results) (sortBy (comparing Some) expectedAnswers)
   where
     (>>) = (Monad.>>)
     resultsCount = length results
     expectedAnswersCount = length expectedAnswers
 
-check :: [(LispTerm ix, [Some (Neq LispTermF)])] -> [LispTerm ix] -> Assertion
+check :: [(LispTerm ix, [Some (Neq LispVar)])] -> [LispTerm ix] -> Assertion
 check xs ys = go xs ys
   where
     prefix = display $ PP.align ("xs = " <> pretty (map (first Some) xs)) PP.<$>
@@ -282,47 +282,6 @@ allUniqueTests = testGroup "append tests"
       ]
   ]
 
-
--- heado :: LispTerm ix -> LispTerm ix -> Predicate LispTermF
--- heado l h = fresh $ \t -> inject (Pair h t) === l
---
--- tailo :: LispTerm ix -> LispTerm ix -> Predicate LispTermF
--- tailo l t = fresh $ \h -> inject (Pair h t) === l
---
--- isAppend :: TestTree
--- isAppend = testProperty "Append Works"
---            . mapSize (const 3)
---            . forAll (two . listOf1 $ mkTerm [])
---            $ \(l, r) -> case runN 1 atomType $ appendo (list l) (list r) of
---                           (t, _) : _ -> t == list (l ++ r)
---                           _ -> False
---
--- isHead :: TestTree
--- isHead = testProperty "Head Works"
---          . mapSize (const 3)
---          . forAll (listOf1 $ mkTerm [])
---          $ \terms -> case runN 1 $ heado (list terms) of
---                       (t, _) : _ -> t == head terms
---                       _ -> False
---
--- isTail :: TestTree
--- isTail = testProperty "Tail Works"
---          . mapSize (const 3)
---          . forAll (listOf1 $ mkTerm [])
---          $ \terms -> case runN 1 $ tailo (list terms) of
---                       (t, _) : _ -> t == list (tail terms)
---                       _ -> False
---
--- main :: IO ()
--- main = defaultMain $
---   adjustOption (const $ QuickCheckTests 1000) $
---   adjustOption (const $ QuickCheckMaxSize 1000) $
---   testGroup "List Tests"
---     [ isAppend
---     -- , isHead
---     -- , isTail
---     ]
-
 hcompareIxTest :: (HOrdHet f) => String -> f ix -> f ix' -> Ordering -> TestTree
 hcompareIxTest name x y expected =
   testCase name $
@@ -330,11 +289,11 @@ hcompareIxTest name x y expected =
 
 -- lisp term ordered naturally
 type OrderedLispTermF = AtomF :+: ListF
-type OrderedLispTerm = Term OrderedLispTermF
+type OrderedLispTerm = Term (Safe.LVar OrderedLispTermF)
 
 -- lisp term ordered unnatuarlly but this ordering should also be acceptable
 type ReversedLispTermF = ListF :+: AtomF
-type ReversedLispTerm = Term ReversedLispTermF
+type ReversedLispTerm = Term (Safe.LVar ReversedLispTermF)
 
 ixComparisonTests :: TestTree
 ixComparisonTests = testGroup "index comparison tests"
