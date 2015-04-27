@@ -31,9 +31,14 @@ module Language.HKanren.Syntax
 
   , Predicate
 
+  , LVar
   , TypeI
   , Unifiable
   , Term
+  , Term1
+  , LFunctor
+  , LDomain
+  , Type
   , Neq
   )
 where

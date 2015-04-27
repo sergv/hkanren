@@ -181,8 +181,8 @@ appendTests = testGroup "append tests"
                  , list [iAtom "z"]
                  ]))
       [list [ list [iAtom "x", iAtom "y"]
-              , list [iAtom "z"]
-              ]]
+            , list [iAtom "z"]
+            ]]
   ]
 
 succeedingMemberTest

@@ -33,7 +33,6 @@ where
 import Data.HUtils
 import Language.HKanren.Syntax
 import Language.HKanren.Types.List
-import Language.HKanren.Subst (Term1, LFunctor)
 
 import Prelude (return, ($))
 

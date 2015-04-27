@@ -31,13 +31,13 @@ import Language.HKanren.Type
 --   -- type Term h = HFree h k
 --   mkLVar :: Integer -> Type (f (HFree f (k f))) ix -> k f ix
 
-type Term k = HFree (LFunctor k) k
+type Term k  = HFree (LFunctor k) k
 type Term1 k = LFunctor k (Term k)
 
 class (HOrd k, HOrdHet k, HShow k, HPretty k) => LVar (k :: * -> *) where
-  type LFunctor k   :: (* -> *) -> (* -> *)
-  type LDomain k :: *
-  data LMap k    :: *
+  type LFunctor k :: (* -> *) -> (* -> *)
+  type LDomain k  :: *
+  data LMap k     :: *
   mkLVar    :: (TypeI (Term1 k) ix) => Integer -> k ix
   getDomain :: k ix -> LDomain k
 

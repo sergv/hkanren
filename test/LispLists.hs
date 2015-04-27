@@ -14,6 +14,7 @@
 
 module LispLists where
 
+import Control.DeepSeq
 import Data.HOrdering
 import Data.HUtils
 import Data.Monoid
@@ -44,6 +45,9 @@ instance HOrd (Type (AtomF h)) where
 
 instance HOrdHet (Type (AtomF h)) where
   hcompareIx TAtom TAtom = HEQ
+
+instance HNFData (Type (AtomF h)) where
+  hrnf TAtom = ()
 
 
 data AtomF :: (* -> *) -> (* -> *) where
@@ -85,7 +89,10 @@ instance HShow (AtomF f) where
 instance HPretty (AtomF f) where
   hpretty (Atom str) = PP.text $ T.pack str
 
+instance HNFData (AtomF h) where
+  hrnf (Atom x) = rnf x
+
 type LispTermF = ListF :+: AtomF
-type LispVar = (Safe.LVar LispTermF)
-type LispTerm = Term LispVar
+type LispVar   = Safe.LVar LispTermF
+type LispTerm  = Term LispVar
 

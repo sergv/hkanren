@@ -76,6 +76,10 @@ instance (HOrdHet (Type (f (HFree f a)))) => HOrdHet (Type (HFree f a)) where
   {-# INLINABLE hcompareIx #-}
   hcompareIx (THFree x) (THFree y) = {-# SCC hcompareIx_type_hfree #-} hcompareIx x y
 
+instance (HNFData (Type (f (HFree f a)))) => HNFData (Type (HFree f a)) where
+  hrnf (THFree x) = hrnf x
+
+
 instance (If (SupportsIx (f r) ix) (TypeI (f r) ix) (TypeI (g r) ix), SingI (SupportsIx (f r) ix)) => TypeI ((:+:) f g r) ix where
   type SupportsIx ((:+:) f g r) ix = (SupportsIx (f r) ix) :|| (SupportsIx (g r) ix)
   data Type ((:+:) f g r) ix where
@@ -132,3 +136,9 @@ instance (HOrdHet (Type (f r)), HOrdHet (Type (g r))) => HOrdHet (Type ((:+:) f 
     --   (STrue,  SFalse) -> HGT
     --   (SFalse, STrue)  -> HLT
 
+instance (HNFData (Type (f r)), HNFData (Type (g r))) => HNFData (Type ((:+:) f g r)) where
+  hrnf :: forall ix. Type ((:+:) f g r) ix -> ()
+  hrnf (TSum x) =
+    case sing :: SBool (SupportsIx (f r) ix) of
+      STrue  -> hrnf x
+      SFalse -> hrnf x

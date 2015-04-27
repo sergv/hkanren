@@ -30,6 +30,7 @@
 module Data.HUtils where
 
 import Control.Applicative
+import Control.DeepSeq
 import Data.Monoid
 
 import Data.HOrdering
@@ -250,3 +251,21 @@ instance (HPretty f, HPretty g) => HPretty (f :*: g) where
 instance (HPretty (f (HFree f a)), HPretty a) => HPretty (HFree f a) where
   hpretty (HPure x) = hpretty x
   hpretty (HFree f) = hpretty f
+
+
+class HNFData (h :: * -> *) where
+  hrnf :: h ix -> ()
+
+instance (HNFData h) => NFData (Some h) where
+  rnf (Some x) = hrnf x
+
+instance (HNFData (f r), HNFData (g r)) => HNFData ((:+:) f g r) where
+  hrnf (Inl x) = hrnf x
+  hrnf (Inr y) = hrnf y
+
+instance (HNFData f, HNFData g) => HNFData (f :*: g) where
+  hrnf (x :*: y) = hrnf x `seq` hrnf y
+
+instance (HNFData (f (HFree f a)), HNFData a) => HNFData (HFree f a) where
+  hrnf (HPure x) = hrnf x
+  hrnf (HFree f) = hrnf f

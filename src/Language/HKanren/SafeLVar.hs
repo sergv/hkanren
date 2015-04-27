@@ -33,6 +33,7 @@ module Language.HKanren.SafeLVar
   (LVar)
 where
 
+import Control.DeepSeq
 import Data.HOrdering
 import Data.HUtils
 import Data.HMap (HMap)
@@ -71,6 +72,9 @@ instance HShow (LVar f) where
 
 instance HPretty (LVar f) where
   hpretty (LVar m _) = PP.angles $ PP.integer m
+
+instance (HNFData (Type (f (Term f)))) => HNFData (LVar f) where
+  hrnf (LVar m t) = rnf m `seq` hrnf t
 
 mkLVar :: (TypeI (h (Term h)) ix) => Integer -> LVar h ix
 mkLVar n = LVar n singType

@@ -21,6 +21,8 @@ library
                      , Data.HUtils
                      , Language.HKanren
                      , Language.HKanren.Functions.List
+                     , Language.HKanren.IntLVar
+                     , Language.HKanren.IntegerLVar
                      , Language.HKanren.SafeLVar
                      , Language.HKanren.Syntax
                      , Language.HKanren.Types.List
@@ -34,6 +36,7 @@ library
                      , logict
                      , singletons
                      , wl-pprint-text
+                     , deepseq
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -W -Wall
@@ -94,6 +97,7 @@ test-suite test-list
                     , singletons
                     , text
                     , wl-pprint-text
+                    , deepseq
   default-language:   Haskell2010
   ghc-options:        -W -Wall
                       -fwarn-monomorphism-restriction
@@ -101,3 +105,23 @@ test-suite test-list
                       -fno-warn-name-shadowing
                       -ferror-spans -rtsopts
   ghc-prof-options:   -fprof-auto
+
+benchmark benchmark-lvars
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   ., test
+  main-is:          BenchmarkLVars.hs
+  build-depends:    hkanren
+                  , base
+                  , deepseq
+                  , directory
+                  , filepath
+                  , criterion
+                  , text
+                  , wl-pprint-text
+  -- ghc-options:      -O2
+  --                   -fmax-simplifier-iterations=10
+  --                   -fdicts-cheap
+  --                   -fspec-constr-count=6
+  default-language:  Haskell2010
+  ghc-options:       -O2 -W -Wall -fwarn-monomorphism-restriction -ferror-spans -rtsopts
+                     -main-is BenchmarkLVars

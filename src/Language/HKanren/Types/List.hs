@@ -81,6 +81,9 @@ instance (HOrdHet (Type h)) => HOrdHet (Type (ListF h)) where
       HEQ -> HEQ
       HGT -> HGT
 
+instance (HNFData (Type h)) => HNFData (Type (ListF h)) where
+  hrnf (TList x) = hrnf x
+
 
 data ListF :: (* -> *) -> (* -> *) where
   Nil  :: (TypeI h ix) => ListF h (List ix)
@@ -173,6 +176,10 @@ instance (HShow h) => HShow (ListF h) where
 instance (HPretty h) => HPretty (ListF h) where
   hpretty Nil = "Nil"
   hpretty (Cons x xs) = hpretty x <+> "::" <+> hpretty xs
+
+instance (HNFData h) => HNFData (ListF h) where
+  hrnf Nil = ()
+  hrnf (Cons x xs) = hrnf x `seq` hrnf xs
 
 
 list :: (ListF :<: LFunctor k, TypeI (Term k) ix, LVar k) => [Term k ix] -> Term k (List ix)
