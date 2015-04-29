@@ -21,11 +21,13 @@ library
                      , Data.HUtils
                      , Language.HKanren
                      , Language.HKanren.Functions.List
+                     , Language.HKanren.Functions.Nat
                      , Language.HKanren.IntLVar
                      , Language.HKanren.IntegerLVar
                      , Language.HKanren.SafeLVar
                      , Language.HKanren.Syntax
                      , Language.HKanren.Types.List
+                     , Language.HKanren.Types.Nat
   other-modules:       Data.HMap
                      , Language.HKanren.Core
                      , Language.HKanren.LVar
@@ -125,3 +127,4 @@ benchmark benchmark-lvars
   default-language:  Haskell2010
   ghc-options:       -O2 -W -Wall -fwarn-monomorphism-restriction -ferror-spans -rtsopts
                      -main-is BenchmarkLVars
+  ghc-prof-options:  -fprof-auto

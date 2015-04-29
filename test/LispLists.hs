@@ -23,6 +23,7 @@ import Data.Type.Equality
 import Language.HKanren
 import qualified Language.HKanren.SafeLVar as Safe
 import Language.HKanren.Types.List
+import Language.HKanren.Types.Nat
 import qualified Text.PrettyPrint.Leijen.Text as PP
 
 
@@ -92,7 +93,7 @@ instance HPretty (AtomF f) where
 instance HNFData (AtomF h) where
   hrnf (Atom x) = rnf x
 
-type LispTermF = ListF :+: AtomF
+type LispTermF = ListF :+: AtomF :+: NatF
 type LispVar   = Safe.LVar LispTermF
 type LispTerm  = Term LispVar
 

@@ -18,9 +18,11 @@ import Data.HUtils
 import Data.Monoid
 import qualified Data.Text.Lazy as T
 import Language.HKanren.Functions.List
+import Language.HKanren.Functions.Nat
 import qualified Language.HKanren.SafeLVar as Safe
 import Language.HKanren.Syntax
 import Language.HKanren.Types.List
+import Language.HKanren.Types.Nat
 import Text.PrettyPrint.Leijen.Text (Pretty(..), displayT, renderPretty)
 import qualified Text.PrettyPrint.Leijen.Text as PP
 import Test.Tasty
@@ -29,7 +31,7 @@ import Test.Tasty.QuickCheck hiding ((===))
 
 import LispLists
 
-import Data.List (sortBy, genericLength)
+import Data.List (sortBy)
 import Data.Ord (comparing)
 import Data.String
 import Prelude hiding ((>>), (>>=))
@@ -65,14 +67,14 @@ failingListTest testName query =
     [] -> return ()
     _  -> assertFailure "predicate unexpectedly succeeded"
 
-listTest
+lispTest
   :: forall ix. (TypeI (LispTermF LispTerm) ix)
   => String
   -> Integer
   -> (LispTerm ix -> Predicate LispVar)
   -> [LispTerm ix]
   -> TestTree
-listTest testName n query expectedAnswers =
+lispTest testName n query expectedAnswers =
   testCase testName $
   case runN n query of
     []      -> assertFailure "no results"
@@ -91,10 +93,10 @@ checkSorted results expectedAnswers = do
 check :: [(LispTerm ix, [Some (Neq LispVar)])] -> [LispTerm ix] -> Assertion
 check xs ys = go xs ys
   where
-    prefix = display $ PP.align ("xs = " <> pretty (map (first Some) xs)) PP.<$>
-                       "|xs| = " <> pretty (length xs) PP.<$>
-                       PP.align ("ys = " <> pretty (map Some ys)) PP.<$>
-                       "|ys| = " <> pretty (length ys) <> PP.line
+    prefix = display $ PP.align ("results  = " <> pretty (map (first Some) xs)) PP.<$>
+                       "|results|  = " <> pretty (length xs) PP.<$>
+                       PP.align ("expected = " <> pretty (map Some ys)) PP.<$>
+                       "|expected| = " <> pretty (length ys) <> PP.line
     go []          []     = return ()
     go ((t, _):rs) (a:as) = assertHEqual prefix t a Monad.>> go rs as
     go ((t, _):_)  []     = assertFailure $ "more results than answers, next result: " ++ hshow t
@@ -111,7 +113,7 @@ appendTest
   -> [LispTerm ix]
   -> TestTree
 appendTest testName xs ys zs =
-  listTest
+  lispTest
     testName
     1
     (\q -> appendo (list xs) (list ys) q)
@@ -144,7 +146,7 @@ appendTests = testGroup "append tests"
       [iAtom "foo", iAtom "bar", iAtom "baz"]
       [iAtom "x", iAtom "y", iAtom "z"]
       [iAtom "foo", iAtom "bar", iAtom "baz", iAtom "x", iAtom "y", iAtom "z"]
-  , listTest
+  , lispTest
       "append 1d, infer input"
       1
       (\q -> appendo
@@ -165,7 +167,7 @@ appendTests = testGroup "append tests"
       , list [iAtom "x", iAtom "y"]
       , list [iAtom "z"]
       ]
-  , listTest
+  , lispTest
       "append 2d, infer input"
       1
       (\q -> appendo
@@ -192,7 +194,7 @@ succeedingMemberTest
   -> [LispTerm ix]
   -> TestTree
 succeedingMemberTest name x xs =
-  listTest
+  lispTest
     name
     1
     (\q -> do
@@ -224,9 +226,9 @@ memberQuery
   -> [LispTerm ix]
   -> TestTree
 memberQuery name xs expectedAnswers =
-  listTest
+  lispTest
     name
-    (genericLength xs)
+    (length xs)
     (\q -> do
       member q xs')
     expectedAnswers
@@ -253,6 +255,30 @@ memberTests = testGroup "append tests"
       [iAtom "foo", iAtom "bar"]
   ]
 
+plusoQuery
+  :: String
+  -> Int
+  -> Int
+  -> Int
+  -> TestTree
+plusoQuery testName x y expected =
+  lispTest
+    testName
+    1
+    (\q -> pluso (int2nat x) (int2nat y) q)
+    [int2nat expected]
+
+natTests :: TestTree
+natTests = testGroup "nat tests"
+  [ testGroup "pluso"
+      [ plusoQuery "0 + 0 = 0" 0 0 0
+      , plusoQuery "0 + 1 = 1" 0 1 1
+      , plusoQuery "1 + 0 = 1" 1 0 1
+      , plusoQuery "1 + 1 = 2" 1 1 2
+      ]
+  ]
+
+
 allUniqueQuery
   :: (TypeI (LispTermF LispTerm) ix)
   => String
@@ -260,7 +286,7 @@ allUniqueQuery
   -> [LispTerm (List ix)]
   -> TestTree
 allUniqueQuery name xs expectedAnswers =
-  listTest
+  lispTest
     name
     (genericLength expectedAnswers)
     (\q -> do
@@ -405,6 +431,7 @@ main = defaultMain $
         , memberTests
         , allUniqueTests
         ]
+    , natTests
     , ixComparisonTests
     , listOrdInstanceTests
     ]
