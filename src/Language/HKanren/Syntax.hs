@@ -25,6 +25,10 @@ module Language.HKanren.Syntax
   , (^=^)
   , (===*)
   , (=/=)
+  , (=/^)
+  , (^/=)
+  , (^/^)
+  , canonizeDbg
 
   , fresh
   , V(..)
@@ -45,7 +49,6 @@ where
 
 import Data.HOrdering
 import Data.HUtils
-import Data.List
 import Language.HKanren.Core (PrimPredicate, Unifiable, Term, Term1, LFunctor, Neq, LVar, LDomain)
 import qualified Language.HKanren.Core as Core
 import Language.HKanren.Subst (TypeI, Type)
@@ -62,10 +65,10 @@ runN
   => TypeI (Term1 k) ix
   => Ord (LDomain k)
   => LVar k
-  => Integer
+  => Int
   -> (Term k ix -> Predicate k)
   -> [(Term k ix, [Some (Neq k)])]
-runN n = genericTake n . run
+runN n f = Core.runN n (toPrimPredicate . f)
 
 run
   :: Unifiable (LFunctor k) k
@@ -100,6 +103,7 @@ toPrimPredicate (WithFresh f)             = Core.fresh (toPrimPredicate . f)
 toPrimPredicate (x :=== y)                = x Core.=== y
 toPrimPredicate (x :===* y)               = x Core.===* y
 toPrimPredicate (x :=/= y)                = x Core.=/= y
+toPrimPredicate (CanonizeDbg t f)         = Core.canonizeDbg t (toPrimPredicate . f)
 
 
 data CombType = Conjunction | Disjunction
@@ -114,6 +118,7 @@ data Predicate k where
   (:=/=)    :: Term k ix -> Term k ix -> Predicate k
   -- this operator is very fishy
   (:===*)   :: Term k ix -> Term k ix' -> Predicate k
+  CanonizeDbg :: Term k ix -> (String -> Predicate k) -> Predicate k
 
 (===) :: (TypeI (Term1 k) ix) => Term k ix -> Term k ix -> Predicate k
 (===) = (:===)
@@ -124,17 +129,26 @@ data Predicate k where
 (=/=) :: Term k ix -> Term k ix -> Predicate k
 (=/=) = (:=/=)
 
+(=/^) :: (f :<: LFunctor k) => Term k ix -> f (Term k) ix -> Predicate k
+(=/^) x y = x =/= inject y
+
+(^/=) :: (f :<: LFunctor k) => f (Term k) ix -> Term k ix -> Predicate k
+(^/=) x y = inject x =/= y
+
+(^/^) :: (f :<: LFunctor k) => f (Term k) ix -> f (Term k) ix -> Predicate k
+(^/^) x y = inject x =/= inject y
+
 (^==) :: (TypeI (Term1 k) ix, f :<: LFunctor k)
       => f (Term k) ix -> Term k ix -> Predicate k
-(^==) l r =  inject l === r
+(^==) l r = inject l === r
 
 (==^) :: (TypeI (Term1 k) ix, f :<: LFunctor k)
       => Term k ix -> f (Term k) ix -> Predicate k
-(==^) l r =  l === inject r
+(==^) l r = l === inject r
 
 (^=^) :: (TypeI (Term1 k) ix, f :<: LFunctor k)
       => f (Term k) ix -> f (Term k) ix -> Predicate k
-(^=^) l r =  inject l === inject r
+(^=^) l r = inject l === inject r
 
 
 success :: Predicate k
@@ -149,6 +163,8 @@ conj = Combine Conjunction
 disj :: Predicate k -> Predicate k -> Predicate k
 disj = Combine Disjunction
 
+canonizeDbg :: Term k ix -> (String -> Predicate k) -> Predicate k
+canonizeDbg = CanonizeDbg
 
 -- | We often want to introduce many fresh variables at once. We've
 -- encoded this in DSKanren with the usual type class hackery for

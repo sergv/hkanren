@@ -33,8 +33,10 @@ module Language.HKanren.Core
   , failure
   , success
   , run
+  , runN
   , Unifiable(..)
   , unifyTerms
+  , canonizeDbg
   )
 where
 
@@ -108,6 +110,12 @@ canonize subst = go Set.empty
             usedVars' = Set.insert v' usedVars
             v'        = S.getDomain v
         HFree x -> HFree $ hfmapId (go usedVars) x
+
+canonizeDbg
+  :: (HFunctorId (LFunctor k), HOrdHet (Type (Term1 k)), Ord (LDomain k), LVar k, HShow (Term1 k))
+  => Term k ix -> (String -> PrimPredicate k) -> PrimPredicate k
+canonizeDbg t f = PrimPredicate $ \s@State{subst} ->
+  unPred (f $ hshow (canonize subst t)) s
 
 -- | Represents inequalities. @(l, r)@ means that @l@ will not unify
 -- with @r@ within the current environment.
@@ -266,3 +274,31 @@ run mkProg = catMaybes $ map answer $ observeAll prog
       case S.lookup initVar subst of
         Just t  -> Just (canonize subst t, neq)
         Nothing -> Nothing
+
+-- {-# INLINABLE run #-}
+-- | Run a program and find first n solutions for the parametrized term.
+runN ::
+  forall k ix.
+     HFunctorId (LFunctor k)
+  => HFoldable (LFunctor k)
+  => Unifiable (LFunctor k) k
+  => TypeI (Term1 k) ix
+  => HOrdHet (Type (Term1 k))
+  => HShow (Term1 k)
+  => Ord (LDomain k)
+  => LVar k
+  => Int
+  -> (Term k ix -> PrimPredicate k)
+  -> [(Term k ix, [Some (Neq k)])]
+runN n mkProg = catMaybes $ map answer $ observeMany n prog
+  where
+    initVarIdx = 0
+    initVar :: k ix
+    initVar = mkLVar initVarIdx
+    prog = unPred (fresh mkProg) (State S.empty initVarIdx [])
+    answer :: State k -> Maybe (Term k ix, [Some (Neq k)])
+    answer State{subst, neq} =
+      case S.lookup initVar subst of
+        Just t  -> Just (canonize subst t, neq)
+        Nothing -> Nothing
+

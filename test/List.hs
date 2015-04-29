@@ -70,7 +70,7 @@ failingListTest testName query =
 lispTest
   :: forall ix. (TypeI (LispTermF LispTerm) ix)
   => String
-  -> Integer
+  -> Int
   -> (LispTerm ix -> Predicate LispVar)
   -> [LispTerm ix]
   -> TestTree
@@ -288,7 +288,7 @@ allUniqueQuery
 allUniqueQuery name xs expectedAnswers =
   lispTest
     name
-    (genericLength expectedAnswers)
+    (length expectedAnswers)
     (\q -> do
       allo (\x -> member x xs') q
       allUnique q)
