@@ -36,15 +36,6 @@ import Data.Ord (comparing)
 import Data.String
 import Prelude hiding ((>>), (>>=))
 
--- redefine the syntax
-(>>) :: Predicate LispVar -> Predicate LispVar -> Predicate LispVar
-(>>) = conj
-
-(>>=) :: Fresh LispVar a
-      -> (a -> Predicate LispVar)
-      -> Predicate LispVar
-(>>=) = withFresh
-
 assertHEqual
   :: (HEq f, HEqHet f, HShow f)
   => String -- ^ prefix

@@ -27,6 +27,9 @@ module Language.HKanren.Functions.List
   , notMember
   , allo
   , foldlo
+  , foldlo'
+  , foldl2o
+  , foldl2o'
   )
 where
 
@@ -35,15 +38,6 @@ import Language.HKanren.Syntax
 import Language.HKanren.Types.List
 
 import Prelude (return, ($))
-
--- redefine the syntax
-(>>) :: Predicate k -> Predicate k -> Predicate k
-(>>) = conj
-
--- (>>=) :: Fresh k a
---       -> (a -> Predicate k)
---       -> Predicate k
--- (>>=) = withFresh
 
 appendo
   :: (ListF :<: LFunctor k, TypeI (Term1 k) (List ix), TypeI (Term1 k) ix)
@@ -119,3 +113,47 @@ foldlo f acc xs out =
       xs ==^ Cons y ys
       f acc y out'
       foldlo f out' ys out)
+
+foldlo'
+  :: forall k acc ix. (ListF :<: LFunctor k, TypeI (Term1 k) acc, TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
+  => Term k acc
+  -> Term k (List ix)
+  -> Term k acc
+  -> (Term k acc -> Term k ix -> Term k acc -> Predicate k)
+  -> Predicate k
+foldlo' acc xs out f = foldlo f acc xs out
+
+
+foldl2o
+  :: forall k acc acc' ix.
+     (ListF :<: LFunctor k, TypeI (Term1 k) acc, TypeI (Term1 k) acc', TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
+  => (Term k acc -> Term k acc' -> Term k ix -> Term k acc -> Term k acc' -> Predicate k)
+  -> Term k acc
+  -> Term k acc'
+  -> Term k (List ix)
+  -> Term k acc
+  -> Term k acc'
+  -> Predicate k
+foldl2o f acc acc' xs out out' =
+  conde
+    (do xs   ==^ Nil
+        acc  === out
+        acc' === out')
+    (fresh $ \y ys out1 out2 -> do
+      xs ==^ Cons y ys
+      f acc acc' y out1 out2
+      foldl2o f out1 out2 ys out out')
+
+
+foldl2o'
+  :: forall k acc acc' ix.
+     (ListF :<: LFunctor k, TypeI (Term1 k) acc, TypeI (Term1 k) acc', TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
+  => Term k acc
+  -> Term k acc'
+  -> Term k (List ix)
+  -> Term k acc
+  -> Term k acc'
+  -> (Term k acc -> Term k acc' -> Term k ix -> Term k acc -> Term k acc' -> Predicate k)
+  -> Predicate k
+foldl2o' acc acc' xs out out' f =
+  foldl2o f acc acc' xs out out'

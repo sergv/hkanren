@@ -28,6 +28,7 @@ library
                      , Language.HKanren.Syntax
                      , Language.HKanren.Types.List
                      , Language.HKanren.Types.Nat
+                     , Language.HKanren.Types.Pair
   other-modules:       Data.HMap
                      , Language.HKanren.Core
                      , Language.HKanren.LVar

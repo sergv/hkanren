@@ -171,7 +171,7 @@ instance HFoldable ListF where
 instance (HShow h) => HShow (ListF h) where
   hshowsPrec _ Nil         = \xs -> "Nil" ++ xs
   hshowsPrec n (Cons x xs) =
-    \ys -> showParen (n == 11) (\zs -> "Cons " ++ hshowsPrec 11 x (showChar ' ' $ hshowsPrec 11 xs zs)) ys
+    showParen (n == 11) (showString "Cons " . hshowsPrec 11 x . showChar ' ' . hshowsPrec 11 xs)
 
 instance (HPretty h) => HPretty (ListF h) where
   hpretty Nil = "Nil"

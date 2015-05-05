@@ -13,8 +13,8 @@ module Language.HKanren.Syntax
   ( conde
   , conj
   , disj
-  , withFresh
-  , Fresh(..)
+  , (>>)
+  , (>>=)
   , success
   , failure
   , run
@@ -52,6 +52,9 @@ import Data.HUtils
 import Language.HKanren.Core (PrimPredicate, Unifiable, Term, Term1, LFunctor, Neq, LVar, LDomain)
 import qualified Language.HKanren.Core as Core
 import Language.HKanren.Subst (TypeI, Type)
+import qualified Text.PrettyPrint.Leijen.Text as PP
+
+import Prelude hiding ((>>), (>>=))
 
 -- | Only grab n solutions. Useful for when the full logic program
 -- might not terminate. Or takes its sweet time to do so.
@@ -62,8 +65,10 @@ runN
   => HOrdHet (Type (Term1 k))
   => HOrdHet (Term1 k)
   => HShow (Term1 k)
+  => HPretty (Term1 k)
   => TypeI (Term1 k) ix
   => Ord (LDomain k)
+  => Show (LDomain k)
   => LVar k
   => Int
   -> (Term k ix -> Predicate k)
@@ -77,8 +82,10 @@ run
   => HOrdHet (Type (Term1 k))
   => HOrdHet (Term1 k)
   => HShow (Term1 k)
+  => HPretty (Term1 k)
   => TypeI (Term1 k) ix
   => Ord (LDomain k)
+  => Show (LDomain k)
   => LVar k
   => (Term k ix -> Predicate k)
   -> [(Term k ix, [Some (Neq k)])]
@@ -91,7 +98,9 @@ toPrimPredicate
   => HOrdHet (Type (Term1 k))
   => HOrdHet (Term1 k)
   => HShow (Term1 k)
+  => HPretty (Term1 k)
   => Ord (LDomain k)
+  => Show (LDomain k)
   => LVar k
   => Predicate k
   -> PrimPredicate k
@@ -118,7 +127,7 @@ data Predicate k where
   (:=/=)    :: Term k ix -> Term k ix -> Predicate k
   -- this operator is very fishy
   (:===*)   :: Term k ix -> Term k ix' -> Predicate k
-  CanonizeDbg :: Term k ix -> (String -> Predicate k) -> Predicate k
+  CanonizeDbg :: Term k ix -> (PP.Doc -> Predicate k) -> Predicate k
 
 (===) :: (TypeI (Term1 k) ix) => Term k ix -> Term k ix -> Predicate k
 (===) = (:===)
@@ -163,7 +172,7 @@ conj = Combine Conjunction
 disj :: Predicate k -> Predicate k -> Predicate k
 disj = Combine Disjunction
 
-canonizeDbg :: Term k ix -> (String -> Predicate k) -> Predicate k
+canonizeDbg :: Term k ix -> (PP.Doc -> Predicate k) -> Predicate k
 canonizeDbg = CanonizeDbg
 
 -- | We often want to introduce many fresh variables at once. We've
@@ -187,57 +196,15 @@ instance MkFresh (Predicate k) where
   fresh = id
 
 
--- data Fresh (ix :: k) = Fresh
---
--- fresh :: (TypeI (Term1 k) ix) => Fresh ix -> (Term k ix -> Predicate k) -> Predicate k
--- fresh Fresh = WithFresh
+(>>) :: Predicate k -> Predicate k -> Predicate k
+(>>) = conj
 
-data Fresh k ix where
-  Fresh  :: (TypeI (Term1 k) ix)
-         => Fresh k (Term k ix)
-  Fresh2 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix')
-         => Fresh k (Term k ix, Term k ix')
-  Fresh3 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'')
-         => Fresh k (Term k ix, Term k ix', Term k ix'')
-  Fresh4 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'', TypeI (Term1 k) ix''')
-         => Fresh k (Term k ix, Term k ix', Term k ix'', Term k ix''')
-  Fresh5 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'', TypeI (Term1 k) ix''', TypeI (Term1 k) ix'''')
-         => Fresh k (Term k ix, Term k ix', Term k ix'', Term k ix''', Term k ix'''')
-  Fresh6 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'', TypeI (Term1 k) ix''', TypeI (Term1 k) ix'''', TypeI (Term1 k) ix''''')
-         => Fresh k (Term k ix, Term k ix', Term k ix'', Term k ix''', Term k ix'''', Term k ix''''')
-  Fresh7 :: (TypeI (Term1 k) ix, TypeI (Term1 k) ix', TypeI (Term1 k) ix'', TypeI (Term1 k) ix''', TypeI (Term1 k) ix'''', TypeI (Term1 k) ix''''', TypeI (Term1 k) ix'''''')
-         => Fresh k (Term k ix, Term k ix', Term k ix'', Term k ix''', Term k ix'''', Term k ix''''', Term k ix'''''')
-
-withFresh :: Fresh k a -> (a -> Predicate k) -> Predicate k
-withFresh Fresh  f = WithFresh f
-withFresh Fresh2 f = WithFresh $ \x ->
-                       WithFresh $ \y -> f (x, y)
-withFresh Fresh3 f = WithFresh $ \x ->
-                       WithFresh $ \y ->
-                         WithFresh $ \z -> f (x, y, z)
-withFresh Fresh4 f = WithFresh $ \x ->
-                       WithFresh $ \y ->
-                         WithFresh $ \z ->
-                           WithFresh $ \w -> f (x, y, z, w)
-withFresh Fresh5 f = WithFresh $ \x ->
-                       WithFresh $ \y ->
-                         WithFresh $ \z ->
-                           WithFresh $ \w ->
-                             WithFresh $ \t -> f (x, y, z, w, t)
-withFresh Fresh6 f = WithFresh $ \x ->
-                       WithFresh $ \y ->
-                         WithFresh $ \z ->
-                           WithFresh $ \w ->
-                             WithFresh $ \t ->
-                               WithFresh $ \u -> f (x, y, z, w, t, u)
-withFresh Fresh7 f = WithFresh $ \x ->
-                       WithFresh $ \y ->
-                         WithFresh $ \z ->
-                           WithFresh $ \w ->
-                             WithFresh $ \t ->
-                               WithFresh $ \u ->
-                                 WithFresh $ \v -> f (x, y, z, w, t, u, v)
-
+(>>=)
+  :: (TypeI (Term1 k) ix)
+  => (Term k ix -> Predicate k)
+  -> (Term k ix -> Predicate k)
+  -> Predicate k
+(>>=) f g = fresh $ \x -> conj (f x) (g x)
 
 class Conde a where
   type CondeVar a :: (* -> *)
