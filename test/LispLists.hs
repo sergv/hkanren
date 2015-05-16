@@ -17,13 +17,13 @@ module LispLists where
 import Control.DeepSeq
 import Data.HOrdering
 import Data.HUtils
-import Data.Monoid
 import qualified Data.Text.Lazy as T
 import Data.Type.Equality
 import Language.HKanren
 import qualified Language.HKanren.SafeLVar as Safe
 import Language.HKanren.Types.List
 import Language.HKanren.Types.Nat
+import Language.HKanren.Types.Pair
 import qualified Text.PrettyPrint.Leijen.Text as PP
 
 
@@ -93,7 +93,7 @@ instance HPretty (AtomF f) where
 instance HNFData (AtomF h) where
   hrnf (Atom x) = rnf x
 
-type LispTermF = ListF :+: AtomF :+: NatF
+type LispTermF = PairF :+: ListF :+: AtomF :+: NatF
 type LispVar   = Safe.LVar LispTermF
 type LispTerm  = Term LispVar
 

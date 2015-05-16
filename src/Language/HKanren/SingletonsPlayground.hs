@@ -39,8 +39,8 @@ data Nat = Z | S Nat
   deriving (Eq)
 
 data instance Sing (n :: Nat) where
-  SZ :: Sing Z
-  SS :: Sing n -> Sing (S n)
+  SZ :: Sing 'Z
+  SS :: Sing n -> Sing ('S n)
 
 type SNat (k :: Nat) = Sing k
 
@@ -87,10 +87,10 @@ instance SEqIx ('KProxy :: KProxy Test) where
 
 
 
-foo :: SNat (S (S Z))
+foo :: SNat ('S ('S 'Z))
 foo = SS $ SS SZ
 
-bar :: STest (Complex Simple (Complex Simple Simple))
+bar :: STest ('Complex 'Simple ('Complex 'Simple 'Simple))
 bar = SComplex SSimple $ SComplex SSimple SSimple
 
 main :: IO ()

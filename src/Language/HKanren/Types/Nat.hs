@@ -37,7 +37,6 @@ where
 
 import Data.HOrdering
 import Data.HUtils
-import Data.Monoid
 import Data.Type.Equality
 import Text.PrettyPrint.Leijen.Text ((<+>))
 import qualified Text.PrettyPrint.Leijen.Text as PP

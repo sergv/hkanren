@@ -8,7 +8,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
-module Main where
+module List where
 
 import Control.Arrow (first)
 import Control.Monad (unless)
@@ -23,6 +23,7 @@ import qualified Language.HKanren.SafeLVar as Safe
 import Language.HKanren.Syntax
 import Language.HKanren.Types.List
 import Language.HKanren.Types.Nat
+import Language.HKanren.Types.Pair
 import Text.PrettyPrint.Leijen.Text (Pretty(..), displayT, renderPretty)
 import qualified Text.PrettyPrint.Leijen.Text as PP
 import Test.Tasty
@@ -145,6 +146,32 @@ appendTests = testGroup "append tests"
                (list [])
                (list [iAtom "foo", iAtom "bar"]))
       [list [iAtom "foo", iAtom "bar"]]
+  , lispTest
+      "append 1d, infer both inputs"
+      3
+      (\q -> fresh $ \x y -> do
+          q ==^ Pair x y
+          appendo
+            x
+            y
+            (list [iAtom "foo", iAtom "bar"]))
+      [ iPair (list []) (list [iAtom "foo", iAtom "bar"])
+      , iPair (list [iAtom "foo"]) (list [iAtom "bar"])
+      , iPair (list [iAtom "foo", iAtom "bar"]) (list [])
+      ]
+  -- , lispTest
+  --     "append 1d, infer both inputs, termination"
+  --     4
+  --     (\q -> fresh $ \x y -> do
+  --         q ==^ Pair x y
+  --         appendo
+  --           x
+  --           y
+  --           (list [iAtom "foo", iAtom "bar"]))
+  --     [ iPair (list []) (list [iAtom "foo", iAtom "bar"])
+  --     , iPair (list [iAtom "foo"]) (list [iAtom "bar"])
+  --     , iPair (list [iAtom "foo", iAtom "bar"]) (list [])
+  --     ]
   , appendTest
       "append 2d #1"
       [ list [iAtom "foo"]
@@ -266,6 +293,7 @@ natTests = testGroup "nat tests"
       , plusoQuery "0 + 1 = 1" 0 1 1
       , plusoQuery "1 + 0 = 1" 1 0 1
       , plusoQuery "1 + 1 = 2" 1 1 2
+      , plusoQuery "10 + 20 = 30" 10 20 30
       ]
   ]
 

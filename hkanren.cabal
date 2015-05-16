@@ -17,7 +17,8 @@ source-repository head
   location: https://github.com/sergv/hkanren.git
 
 library
-  exposed-modules:     Data.HOrdering
+  exposed-modules:     Control.Monad.InterleavingLogic
+                     , Data.HOrdering
                      , Data.HUtils
                      , Language.HKanren
                      , Language.HKanren.Functions.List
@@ -107,6 +108,7 @@ test-suite test-list
                       -fno-warn-type-defaults
                       -fno-warn-name-shadowing
                       -ferror-spans -rtsopts
+                      -main-is List
   ghc-prof-options:   -fprof-auto
 
 benchmark benchmark-lvars

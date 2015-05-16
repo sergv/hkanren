@@ -40,7 +40,9 @@ module Language.HKanren.Core
   )
 where
 
-import Control.Monad.Logic
+import Control.Monad
+import Control.Monad.Logic.Class
+import Control.Monad.InterleavingLogic
 import Data.Maybe
 import Data.Monoid
 import Data.Set (Set)
@@ -232,7 +234,9 @@ checkNeq n s@State{subst} =
   => HEqHet (Term1 k)
   => HOrdHet (Type (Term1 k))
   => HShow (Term1 k)
+  => HPretty (Term1 k)
   => Ord (LDomain k)
+  => Show (LDomain k)
   => LVar k
   => Term k ix
   -> Term k ix'
