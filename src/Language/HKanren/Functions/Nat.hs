@@ -31,9 +31,7 @@ import Data.HUtils
 import Language.HKanren.Syntax
 import Language.HKanren.Types.Nat
 
-import Prelude (return, fail, ($), show)
-
-import Data.String
+import Prelude (return, fail, ($))
 
 pluso
   :: (NatF :<: LFunctor k, TypeI (Term1 k) Nat)

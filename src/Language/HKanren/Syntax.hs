@@ -5,12 +5,14 @@
 {-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Language.HKanren.Syntax
   ( conde
+  , condp
   , conj
   , disj
   , (>>)
@@ -47,8 +49,11 @@ module Language.HKanren.Syntax
   )
 where
 
+import Control.Arrow
+import Control.Monad.AbstractLogic (AbstractLogic)
 import Data.HOrdering
 import Data.HUtils
+import Data.Proxy (Proxy)
 import Language.HKanren.Core (PrimPredicate, Unifiable, Term, Term1, LFunctor, Neq, LVar, LDomain)
 import qualified Language.HKanren.Core as Core
 import Language.HKanren.Subst (TypeI, Type)
@@ -70,10 +75,12 @@ runN
   => Ord (LDomain k)
   => Show (LDomain k)
   => LVar k
-  => Int
+  => AbstractLogic m n
+  => Proxy m
+  -> Int
   -> (Term k ix -> Predicate k)
-  -> [(Term k ix, [Some (Neq k)])]
-runN n f = Core.runN n (toPrimPredicate . f)
+  -> n [(Term k ix, [Some (Neq k)])]
+runN nondetProxy n f = Core.runN n (toPrimPredicate nondetProxy . f)
 
 run
   :: Unifiable (LFunctor k) k
@@ -87,12 +94,15 @@ run
   => Ord (LDomain k)
   => Show (LDomain k)
   => LVar k
-  => (Term k ix -> Predicate k)
-  -> [(Term k ix, [Some (Neq k)])]
-run f = Core.run (toPrimPredicate . f)
+  => AbstractLogic m n
+  => Proxy m
+  -> (Term k ix -> Predicate k)
+  -> n [(Term k ix, [Some (Neq k)])]
+run nondetProxy f = Core.run (toPrimPredicate nondetProxy . f)
 
 toPrimPredicate
-  :: Unifiable (LFunctor k) k
+  :: forall k m n.
+     Unifiable (LFunctor k) k
   => HFoldable (LFunctor k)
   => HFunctorId (LFunctor k)
   => HOrdHet (Type (Term1 k))
@@ -102,32 +112,38 @@ toPrimPredicate
   => Ord (LDomain k)
   => Show (LDomain k)
   => LVar k
-  => Predicate k
-  -> PrimPredicate k
-toPrimPredicate Success                   = Core.success
-toPrimPredicate Failure                   = Core.failure
-toPrimPredicate (Combine Conjunction x y) = Core.conj (toPrimPredicate x) (toPrimPredicate y)
-toPrimPredicate (Combine Disjunction x y) = Core.disconj (toPrimPredicate x) (toPrimPredicate y)
-toPrimPredicate (WithFresh f)             = Core.fresh (toPrimPredicate . f)
-toPrimPredicate (x :=== y)                = x Core.=== y
-toPrimPredicate (x :===* y)               = x Core.===* y
-toPrimPredicate (x :=/= y)                = x Core.=/= y
-toPrimPredicate (CanonizeDbg t f)         = Core.canonizeDbg t (toPrimPredicate . f)
-
+  => AbstractLogic m n
+  => Proxy m
+  -> Predicate k
+  -> PrimPredicate m k
+toPrimPredicate _ = go
+  where
+    go :: Predicate k -> PrimPredicate m k
+    go Success                   = Core.success
+    go Failure                   = Core.failure
+    go (Combine Conjunction x y) = Core.conj (go x) (go y)
+    go (Combine Disjunction x y) = Core.disconj (go x) (go y)
+    go (ProbabilisticDisj cases) = Core.probabilisticDisconj (map (second go) cases)
+    go (WithFresh f)             = Core.fresh (go . f)
+    go (x :=== y)                = x Core.=== y
+    go (x :===* y)               = x Core.===* y
+    go (x :=/= y)                = x Core.=/= y
+    go (CanonizeDbg t f)         = Core.canonizeDbg t (go . f)
 
 data CombType = Conjunction | Disjunction
   deriving (Show, Eq, Ord, Enum, Bounded)
 
 data Predicate k where
-  Success   :: Predicate k
-  Failure   :: Predicate k
-  Combine   :: CombType -> Predicate k -> Predicate k -> Predicate k
-  WithFresh :: (TypeI (Term1 k) ix) => (Term k ix -> Predicate k) -> Predicate k
-  (:===)    :: (TypeI (Term1 k) ix) => Term k ix  -> Term k ix -> Predicate k
-  (:=/=)    :: Term k ix -> Term k ix -> Predicate k
+  Success           :: Predicate k
+  Failure           :: Predicate k
+  Combine           :: CombType -> Predicate k -> Predicate k -> Predicate k
+  ProbabilisticDisj :: [(Int, Predicate k)] -> Predicate k
+  WithFresh         :: (TypeI (Term1 k) ix) => (Term k ix -> Predicate k) -> Predicate k
+  (:===)            :: (TypeI (Term1 k) ix) => Term k ix  -> Term k ix -> Predicate k
+  (:=/=)            :: Term k ix -> Term k ix -> Predicate k
   -- this operator is very fishy
-  (:===*)   :: Term k ix -> Term k ix' -> Predicate k
-  CanonizeDbg :: Term k ix -> (PP.Doc -> Predicate k) -> Predicate k
+  (:===*)           :: Term k ix -> Term k ix' -> Predicate k
+  CanonizeDbg       :: Term k ix -> (PP.Doc -> Predicate k) -> Predicate k
 
 (===) :: (TypeI (Term1 k) ix) => Term k ix -> Term k ix -> Predicate k
 (===) = (:===)
@@ -172,6 +188,9 @@ conj = Combine Conjunction
 disj :: Predicate k -> Predicate k -> Predicate k
 disj = Combine Disjunction
 
+probabilisticDisj :: [(Int, Predicate k)] -> Predicate k
+probabilisticDisj = ProbabilisticDisj
+
 canonizeDbg :: Term k ix -> (PP.Doc -> Predicate k) -> Predicate k
 canonizeDbg = CanonizeDbg
 
@@ -213,7 +232,7 @@ class Conde a where
 instance Conde (Predicate k) where
   type CondeVar (Predicate k) = k
   condeImpl [] = Failure
-  condeImpl xs = foldr1 (Combine Disjunction) $ reverse xs
+  condeImpl xs = foldr1 disj $ reverse xs
 
 instance (Conde a, CondeVar a ~ k) => Conde (Predicate k -> a) where
   type CondeVar (Predicate k -> a) = k
@@ -221,3 +240,20 @@ instance (Conde a, CondeVar a ~ k) => Conde (Predicate k -> a) where
 
 conde :: (Conde a) => a
 conde = condeImpl []
+
+
+class ProbabilistictConde a where
+  type ProbabilisticCondeVar a :: (* -> *)
+  probabilisticCondeImpl :: [(Int, Predicate (ProbabilisticCondeVar a))] -> a
+
+instance ProbabilistictConde (Predicate k) where
+  type ProbabilisticCondeVar (Predicate k) = k
+  probabilisticCondeImpl = probabilisticDisj . reverse
+
+instance (ProbabilistictConde a, ProbabilisticCondeVar a ~ k) => ProbabilistictConde ((Int, Predicate k) -> a) where
+  type ProbabilisticCondeVar ((Int, Predicate k) -> a) = k
+  probabilisticCondeImpl xs x = probabilisticCondeImpl (x : xs)
+
+condp :: (ProbabilistictConde a) => a
+condp = probabilisticCondeImpl []
+

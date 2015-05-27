@@ -13,12 +13,14 @@ module List where
 import Control.Arrow (first)
 import Control.Monad (unless)
 import qualified Control.Monad as Monad
+import Data.Functor.Identity
 import Data.HOrdering
 import Data.HUtils
 import Data.Monoid
 import qualified Data.Text.Lazy as T
 import Language.HKanren.Functions.List
 import Language.HKanren.Functions.Nat
+import Language.HKanren.Nondeterminism
 import qualified Language.HKanren.SafeLVar as Safe
 import Language.HKanren.Syntax
 import Language.HKanren.Types.List
@@ -55,7 +57,7 @@ failingListTest
   -> TestTree
 failingListTest testName query =
   testCase testName $
-  case runN 1 query of
+  case runIdentity $ runN nondetBreadthFirst 1 query of
     [] -> return ()
     _  -> assertFailure "predicate unexpectedly succeeded"
 
@@ -68,7 +70,7 @@ lispTest
   -> TestTree
 lispTest testName n query expectedAnswers =
   testCase testName $
-  case runN n query of
+  case runIdentity $ runN nondetBreadthFirst n query of
     []      -> assertFailure "no results"
     results -> checkSorted results expectedAnswers
 
@@ -323,7 +325,7 @@ allUniqueTests = testGroup "append tests"
       [ list []
       , list [iAtom "bar"]
       , list [iAtom "foo"]
-      , list [iAtom "bar", iAtom "foo"]
+      , list [iAtom "foo", iAtom "bar"]
       ]
   ]
 

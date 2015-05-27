@@ -25,13 +25,9 @@
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
-{-# LANGUAGE OverlappingInstances #-}
-
 module Data.HUtils where
 
-import Control.Applicative
 import Control.DeepSeq
-import Data.Monoid
 
 import Data.HOrdering
 
@@ -196,14 +192,12 @@ instance f :<: f where
   inj  = id
   proj = Just
 
--- {- # OVERLAPS #-}
-instance  f :<: (f :+: g) where
+instance {-# OVERLAPS #-} f :<: (f :+: g) where
   inj = Inl
   proj (Inl x) = Just x
   proj _       = Nothing
 
--- {- # OVERLAPS #-}
-instance  (f :<: g) => f :<: (h :+: g) where
+instance {-# OVERLAPS #-} (f :<: g) => f :<: (h :+: g) where
   inj = Inr . inj
   proj (Inr x) = proj x
   proj _       = Nothing
