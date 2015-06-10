@@ -121,8 +121,8 @@ toPrimPredicate _ = go
     go :: Predicate k -> PrimPredicate m k
     go Success                   = Core.success
     go Failure                   = Core.failure
-    go (Combine Conjunction x y) = Core.conj (go x) (go y)
-    go (Combine Disjunction x y) = Core.disconj (go x) (go y)
+    go (Conjunction x y)         = Core.conj (go x) (go y)
+    go (Disjunction xs)          = Core.conde $ map go xs
     go (ProbabilisticDisj cases) = Core.probabilisticDisconj (map (second go) cases)
     go (WithFresh f)             = Core.fresh (go . f)
     go (x :=== y)                = x Core.=== y
@@ -130,13 +130,11 @@ toPrimPredicate _ = go
     go (x :=/= y)                = x Core.=/= y
     go (CanonizeDbg t f)         = Core.canonizeDbg t (go . f)
 
-data CombType = Conjunction | Disjunction
-  deriving (Show, Eq, Ord, Enum, Bounded)
-
 data Predicate k where
   Success           :: Predicate k
   Failure           :: Predicate k
-  Combine           :: CombType -> Predicate k -> Predicate k -> Predicate k
+  Conjunction       :: Predicate k -> Predicate k -> Predicate k
+  Disjunction       :: [Predicate k] -> Predicate k
   ProbabilisticDisj :: [(Int, Predicate k)] -> Predicate k
   WithFresh         :: (TypeI (Term1 k) ix) => (Term k ix -> Predicate k) -> Predicate k
   (:===)            :: (TypeI (Term1 k) ix) => Term k ix  -> Term k ix -> Predicate k
@@ -183,10 +181,10 @@ failure :: Predicate k
 failure = Failure
 
 conj :: Predicate k -> Predicate k -> Predicate k
-conj = Combine Conjunction
+conj = Conjunction
 
-disj :: Predicate k -> Predicate k -> Predicate k
-disj = Combine Disjunction
+disj :: [Predicate k] -> Predicate k
+disj = Disjunction
 
 probabilisticDisj :: [(Int, Predicate k)] -> Predicate k
 probabilisticDisj = ProbabilisticDisj
@@ -231,8 +229,7 @@ class Conde a where
 
 instance Conde (Predicate k) where
   type CondeVar (Predicate k) = k
-  condeImpl [] = Failure
-  condeImpl xs = foldr1 disj $ reverse xs
+  condeImpl = disj . reverse
 
 instance (Conde a, CondeVar a ~ k) => Conde (Predicate k -> a) where
   type CondeVar (Predicate k -> a) = k

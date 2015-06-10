@@ -85,12 +85,15 @@ instance AbstractLogic SFK Identity where
     s <- splitCont x
     case s of
       Nothing      -> mzero
-      Just (a, x') -> f a `interleave` (x' >>- f)
-  interleave x y = do
-    s <- splitCont x
-    case s of
-      Nothing      -> y
-      Just (a, x') -> return a `mplus` interleave y x'
+      Just (a, x') -> f a `interleavePair` (x' >>- f)
+  interleave = foldr interleavePair empty
+    where
   failure = empty
   observeAll = pure . sfk2list
 
+interleavePair :: SFK a -> SFK a -> SFK a
+interleavePair x y = do
+  s <- splitCont x
+  case s of
+    Nothing      -> y
+    Just (a, x') -> return a `mplus` interleavePair y x'

@@ -44,10 +44,10 @@ instance (Nondet c, Observable c m, MonadReader Int m) => Observable (Bounded c)
     observeNondetAll $ getBounded x n
 
 instance (Pointed c, Nondet c, Observable c m, MonadReader Int m) => AbstractLogic (ContNondetT (Bounded c) m) m where
-  (>>-)         = (>>=)
-  interleave    = (<|>)
-  failure       = empty
-  observeAll x   = do
+  (>>-)        = (>>=)
+  interleave   = foldr (<|>) empty
+  failure      = empty
+  observeAll x = do
     step <- ask
     observeNondetAll =<< depthFirst step x
   -- observeMany n = observeNondetMany n <=< unwrapContNondetT

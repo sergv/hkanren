@@ -28,7 +28,7 @@ module Language.HKanren.Core
   , (=/=)
   , fresh
   , conj
-  , disconj
+  , conde
   , probabilisticDisconj
   , PrimPredicate
   , failure
@@ -306,10 +306,10 @@ conj p1 p2 = PrimPredicate $ \s ->
 
 -- | Disjunction. This will return solutions that satisfy either the
 -- first predicate or the second.
-disconj :: (HFoldable (LFunctor k), Unifiable (LFunctor k) k, AbstractLogic m n)
-        => PrimPredicate m k -> PrimPredicate m k -> PrimPredicate m k
-disconj p1 p2 = PrimPredicate $ \s ->
-  unPred p1 s `AL.interleave` unPred p2 s
+conde :: (HFoldable (LFunctor k), Unifiable (LFunctor k) k, AbstractLogic m n)
+      => [PrimPredicate m k] -> PrimPredicate m k
+conde ps = PrimPredicate $ \s ->
+  AL.interleave $ map (\p -> unPred p s) ps
 
 -- | Probabilistic disjunction.
 probabilisticDisconj :: (HFoldable (LFunctor k), Unifiable (LFunctor k) k, AbstractLogic m n)

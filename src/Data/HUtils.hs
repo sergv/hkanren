@@ -30,6 +30,7 @@ module Data.HUtils where
 import Control.DeepSeq
 
 import Data.HOrdering
+import Data.Monoid
 
 import Text.PrettyPrint.Leijen.Text (Pretty, Doc)
 import qualified Text.PrettyPrint.Leijen.Text as PP
@@ -44,6 +45,10 @@ deriving instance (HOrdHet (f (HFix f))) => HOrdHet (HFix f)
 
 hcata :: (HFunctor f) => (f a :-> a) -> HFix f :-> a
 hcata alg = alg . hfmap (hcata alg) . unHFix
+
+hfree :: (HFunctor f) => (g :-> a) -> (f a :-> a) -> HFree f g :-> a
+hfree f _   (HPure x) = f x
+hfree f alg (HFree y) = alg $ hfmap (hfree f alg) y
 
 data (:*:) (f :: * -> *) (g :: * -> *) ix =
   f ix :*: g ix
@@ -147,7 +152,15 @@ instance (HShow (f (HFree f a)), HShow a) => Show (HFree f a ix) where
   showsPrec n (HPure x) = showParen (n == 11) (showString "HPure " . hshowsPrec 11 x)
   showsPrec n (HFree y) = showParen (n == 11) (showString "HPure " . hshowsPrec 11 y)
 
-newtype K a b = K a
+instance (HFunctor f) => HFunctor (HFree f) where
+  hfmap f (HPure x) = HPure $ f x
+  hfmap f (HFree y) = HFree $ hfmap (hfmap f) y
+
+instance (HFoldable f) => HFoldable (HFree f) where
+  hfoldMap f (HPure x) = f x
+  hfoldMap f (HFree y) = hfoldMap (hfoldMap f) y
+
+newtype K a b = K { unK :: a }
   deriving (Show, Eq, Ord)
 
 instance (Eq a) => HEq (K a) where
@@ -165,6 +178,10 @@ instance (Ord a) => HOrdHet (K a) where
       LT -> HLT
       EQ -> HLT -- whatever
       GT -> HGT
+
+instance (Monoid a) => Monoid (K a b) where
+  mempty = K mempty
+  mappend (K x) (K y) = K $ x <> y
 
 type HUnit = K ()
 
