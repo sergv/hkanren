@@ -43,17 +43,17 @@ import qualified Text.PrettyPrint.Leijen.Text as PP
 import qualified Language.HKanren.LVar as L
 import Language.HKanren.Type
 
-type Term h = HFree h (LVar h)
+type LTerm h = HFree h (LVar h)
 
 -- | Logic variable.
 data LVar (f :: (* -> *) -> (* -> *)) ix where
-  LVar :: !Integer -> !(Type (f (Term f)) ix) -> LVar f ix
+  LVar :: !Integer -> !(Type (f (LTerm f)) ix) -> LVar f ix
 
 instance HEq (LVar h) where
   {-# INLINABLE heq #-}
   heq (LVar n _) (LVar m _) = n == m
 
-instance (HEqHet (Type (h (Term h)))) => HEqHet (LVar h) where
+instance (HEqHet (Type (h (LTerm h)))) => HEqHet (LVar h) where
   {-# INLINABLE heqIx #-}
   heqIx (LVar _ x) (LVar _ y) = heqIx x y
   (==*) (LVar n _) (LVar m _) = n == m
@@ -62,7 +62,7 @@ instance HOrd (LVar h) where
   {-# INLINABLE hcompare #-}
   hcompare (LVar n _) (LVar m _) = compare n m
 
-instance (HOrdHet (Type (h (Term h)))) => HOrdHet (LVar h) where
+instance (HOrdHet (Type (h (LTerm h)))) => HOrdHet (LVar h) where
   {-# INLINABLE hcompareIx #-}
   hcompareIx (LVar _ x) (LVar _ y) = {-# SCC hcompareIx_safe_lvar #-} hcompareIx x y
   hcompareHet (LVar n _) (LVar m _) = {-# SCC hcompareHet_safe_lvar #-} compare n m
@@ -73,16 +73,16 @@ instance HShow (LVar f) where
 instance HPretty (LVar f) where
   hpretty (LVar m _) = PP.angles $ PP.integer m
 
-instance (HNFData (Type (f (Term f)))) => HNFData (LVar f) where
+instance (HNFData (Type (f (LTerm f)))) => HNFData (LVar f) where
   hrnf (LVar m t) = rnf m `seq` hrnf t
 
-mkLVar :: (TypeI (h (Term h)) ix) => Integer -> LVar h ix
+mkLVar :: (TypeI (h (LTerm h)) ix) => Integer -> LVar h ix
 mkLVar n = LVar n singType
 
-instance (HOrdHet (Type (h (Term h)))) => L.LVar (LVar h) where
+instance (HOrdHet (Type (h (LTerm h)))) => L.LVar (LVar h) where
   type LFunctor (LVar h) = h
   type LDomain (LVar h)  = Integer
-  newtype LMap (LVar h)  = SafeLMap { getSafeLMap :: HMap (LVar h) (Term h) }
+  newtype LMap (LVar h)  = SafeLMap { getSafeLMap :: HMap (LVar h) (LTerm h) }
   mkLVar = mkLVar
   getDomain (LVar x _) = x
 

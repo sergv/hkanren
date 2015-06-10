@@ -33,7 +33,7 @@ import Language.HKanren.Type
 
 import Unsafe.Coerce
 
-type Term h = HFree h (LVar h)
+type LTerm h = HFree h (LVar h)
 
 newtype LVar (f :: (* -> *) -> (* -> *)) ix = LVar Int
 
@@ -41,7 +41,7 @@ instance HEq (LVar h) where
   {-# INLINABLE heq #-}
   heq (LVar n) (LVar m) = n == m
 
-instance (HEqHet (Type (h (Term h)))) => HEqHet (LVar h) where
+instance (HEqHet (Type (h (LTerm h)))) => HEqHet (LVar h) where
   {-# INLINABLE heqIx #-}
   heqIx (LVar n) (LVar m) =
     if n == m
@@ -53,7 +53,7 @@ instance HOrd (LVar h) where
   {-# INLINABLE hcompare #-}
   hcompare (LVar n) (LVar m) = compare n m
 
-instance (HOrdHet (Type (h (Term h)))) => HOrdHet (LVar h) where
+instance (HOrdHet (Type (h (LTerm h)))) => HOrdHet (LVar h) where
   {-# INLINABLE hcompareIx #-}
   hcompareIx (LVar n) (LVar m) =
     {-# SCC hcompareIx_int_lvar #-}
@@ -73,10 +73,10 @@ instance HNFData (LVar f) where
   hrnf (LVar m) = rnf m
 
 
-instance (HOrdHet (Type (h (Term h)))) => L.LVar (LVar h) where
+instance (HOrdHet (Type (h (LTerm h)))) => L.LVar (LVar h) where
   type LFunctor (LVar h) = h
   type LDomain (LVar h)  = Int
-  newtype LMap (LVar h)  = IntLMap { getIntLMap :: IntMap (Some (Term h)) }
+  newtype LMap (LVar h)  = IntLMap { getIntLMap :: IntMap (Some (LTerm h)) }
   mkLVar = LVar . fromIntegral
   getDomain (LVar x) = x
 
