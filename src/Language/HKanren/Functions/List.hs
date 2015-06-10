@@ -24,6 +24,7 @@ module Language.HKanren.Functions.List
   ( appendo
   , allUnique
   , member
+  , memberp
   , notMember
   , allo
   , foldlo
@@ -37,7 +38,7 @@ import Data.HUtils
 import Language.HKanren.Syntax
 import Language.HKanren.Types.List
 
-import Prelude (return, ($))
+import Prelude (return, ($), Int, fromInteger, (*))
 
 appendo
   :: (ListF :<: LFunctor k, TypeI (Term1 k) (List ix), TypeI (Term1 k) ix)
@@ -75,6 +76,22 @@ member x xs =
       (x === y)
       (do x =/= y
           member x ys))
+
+memberp
+  :: forall k ix. (ListF :<: LFunctor k, TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
+  => Term k ix -> Term k (List ix) -> Predicate k
+memberp x xs =
+  (fresh $ \y ys -> do
+    xs ==^ Cons y ys
+    condp
+      ( (2 * one)
+      , x === y)
+      ( one
+      , do x =/= y
+           memberp x ys))
+  where
+    one :: Int
+    one = 1
 
 notMember
   :: forall k ix. (ListF :<: LFunctor k, TypeI (Term1 k) ix, TypeI (Term1 k) (List ix))
