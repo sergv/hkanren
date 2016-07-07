@@ -35,6 +35,7 @@ type Term k  = HFree (LFunctor k) k
 type Term1 k = LFunctor k (Term k)
 
 class (HOrd k, HOrdHet k, HShow k, HPretty k) => LVar (k :: * -> *) where
+  -- | Type of base functors for variables of type @k@.
   type LFunctor k :: (* -> *) -> (* -> *)
   type LDomain k  :: *
   data LMap k     :: *
@@ -45,7 +46,7 @@ class (HOrd k, HOrdHet k, HShow k, HPretty k) => LVar (k :: * -> *) where
   size   :: LMap k -> LDomain k
   insert :: k ix -> Term k ix -> LMap k -> LMap k
   lookup :: k ix -> LMap k -> Maybe (Term k ix)
-  -- ^ specialized version of keys, for efficiency
+  -- | Specialized version of keys, for efficiency
   domain :: LMap k -> [LDomain k]
   keys   :: LMap k -> [Some k]
   toList :: LMap k -> [Some (k :*: Term k)]
